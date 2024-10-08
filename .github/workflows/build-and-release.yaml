@@ -23,8 +23,7 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
-#      - name: Test
-#        run: dotnet test --no-restore --verbosity normal
+
 
       - name: Publish
         run: dotnet publish --configuration Release --output ./publish
