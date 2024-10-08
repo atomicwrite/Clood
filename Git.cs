@@ -62,38 +62,74 @@ public static class Git
         }
     }
 
-    public static async Task CommitChanges(string workingDirectory, string message)
+    public static async Task<bool> CommitChanges(string workingDirectory, string message)
     {
-        // First, add all changes
-        await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments("add *")
-            .ExecuteAsync();
+        try
+        {
+            // First, check if there are any changes to commit
+            var statusResult = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("status --porcelain")
+                .ExecuteBufferedAsync();
 
-        // Then, commit the changes
-        await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments($"commit -m \"{message}\"")
-            .ExecuteAsync();
+            if (string.IsNullOrWhiteSpace(statusResult.StandardOutput))
+            {
+                Console.WriteLine("No changes to commit.");
+                return false;
+            }
 
-        Console.WriteLine("Changes added and committed successfully.");
+            // Add all changes
+            await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("add .")
+                .ExecuteAsync();
+
+            // Commit the changes
+            await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments($"commit -m \"{message}\"")
+                .ExecuteAsync();
+
+            Console.WriteLine("Changes added and committed successfully.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during commit process: {ex.Message}");
+            return false;
+        }
     }
 
-    public static async Task MergeChanges(string workingDirectory, string currentBranch, string newBranchName)
+    public static async Task<bool> MergeChanges(string workingDirectory, string currentBranch, string newBranchName)
     {
-        // First, commit changes on the new branch
-        await CommitChanges(workingDirectory, $"Changes made by Claudia AI on branch {newBranchName}");
+        try
+        {
+            // First, commit changes on the new branch
+            var commitSuccess = await CommitChanges(workingDirectory, $"Changes made by Claudia AI on branch {newBranchName}");
+            
+            if (!commitSuccess)
+            {
+                Console.WriteLine("No changes to merge.");
+                return false;
+            }
 
-        // Switch back to the original branch
-        await SwitchToBranch(workingDirectory, currentBranch);
+            // Switch back to the original branch
+            await SwitchToBranch(workingDirectory, currentBranch);
 
-        // Merge the new branch
-        await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments($"merge {newBranchName}")
-            .ExecuteAsync();
+            // Merge the new branch
+            await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments($"merge {newBranchName}")
+                .ExecuteAsync();
 
-        Console.WriteLine($"Merged changes from {newBranchName} into {currentBranch}");
+            Console.WriteLine($"Merged changes from {newBranchName} into {currentBranch}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during merge process: {ex.Message}");
+            return false;
+        }
     }
 
     public static async Task SwitchToBranch(string workingDirectory, string branchName)

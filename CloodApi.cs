@@ -101,7 +101,7 @@ public static class CloodApi
         return Results.Ok(new CloodResponse { Id = sessionId, NewBranch = session.NewBranch, ProposedChanges = session.ProposedChanges });
     }
 
-    private static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request)
+     private static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request)
     {
         if (!Sessions.TryRemove(request.Id, out var session))
         {
@@ -118,8 +118,15 @@ public static class CloodApi
         {
             if (request.Merge)
             {
-                await Git.MergeChanges(session.GitRoot, session.OriginalBranch, session.NewBranch);
-                return Results.Ok("Changes merged successfully.");
+                var mergeSuccess = await Git.MergeChanges(session.GitRoot, session.OriginalBranch, session.NewBranch);
+                if (mergeSuccess)
+                {
+                    return Results.Ok("Changes merged successfully.");
+                }
+                else
+                {
+                    return Results.Ok("No changes to merge.");
+                }
             }
             else
             {
