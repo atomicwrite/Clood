@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using CliWrap;
@@ -11,54 +12,59 @@ using Microsoft.Extensions.Configuration;
 using Claudia;
 using Markdig;
 using Markdig.Syntax;
+using CommandLine;
 
 namespace Clood;
 
-class Program
+internal class Program
 {
-    private static Anthropic _anthropic;
-    private static readonly List<string> Files = new List<string>();
-    private static string _workingDirectory;
+    private static Anthropic anthropic;
 
-    static async Task Main(string[] args)
+
+    private static async Task Main(string[] args)
     {
-        Console.WriteLine("Welcome to the Claudia API and Git Integration Script!");
+        await Parser.Default.ParseArguments<CliOptions>(args)
+            .WithParsedAsync(async (opts) => await RunWithOptions(opts));
+    }
 
-        SetupApiKey();
-        await HandleFileInput(args);
-        if (Files.Count == 0)
+    private static async Task RunWithOptions(CliOptions opts)
+    {
+        if (opts.Version)
         {
+            Console.WriteLine("Clood Program v" + Assembly.GetExecutingAssembly().GetName().Version.ToString());
             return;
         }
 
-        // Check for uncommitted changes
-        if (await HasUncommittedChanges())
-        {
-            Console.WriteLine("Warning: You have uncommitted changes in your working directory.");
-            Console.Write("Do you want to commit these changes before proceeding? (y/n): ");
-            if (Console.ReadLine().ToLower() == "y")
-            {
-                Console.Write("Enter a commit message: ");
-                string commitMessage = Console.ReadLine();
-                await Git.CommitChanges(_workingDirectory, commitMessage);
-                Console.WriteLine("Changes committed successfully.");
-            }
-            else
-            {
-                Console.Write(
-                    "Proceeding with uncommitted changes might affect the script's behavior. Do you want to exit? (y/n): ");
-                if (Console.ReadLine().ToLower() == "y")
-                {
-                    Console.WriteLine("Exiting script. No changes were made.");
-                    return;
-                }
+        Console.WriteLine("Welcome to the Claudia API and Git Integration Script!");
 
-                Console.WriteLine("Proceeding with uncommitted changes. Please be cautious.");
-            }
+        SetupApiKey();
+
+        var files = opts.Files.ToList();
+        if (files.Count == 0)
+        {
+            Console.WriteLine("No files were specified.");
+            return;
         }
 
-        var prompt = GetUserPrompt();
-        var response = await SendRequestToClaudia(prompt);
+
+        Console.WriteLine("Files we are working on:");
+        foreach (var file in files)
+        {
+            Console.WriteLine($"- {file}");
+        }
+
+        // Check for uncommitted changes
+        if (await HasUncommittedChanges(opts.GitRoot))
+        {
+            Console.WriteLine("Warning: You have uncommitted changes in your working directory.");
+            if (await GitHelpers.AskToCommitUncommited(opts.GitRoot))
+                return;
+        }
+
+        var prompt = opts.Prompt;
+        var systemPrompt = await GetSystemPrompt(opts);
+
+        var response = await SendRequestToClaudia(prompt, systemPrompt, files);
 
         Console.WriteLine("Claudia's response:");
         Console.WriteLine(response);
@@ -72,137 +78,78 @@ class Program
         var currentBranch = "";
         try
         {
-            currentBranch = await Git.GetCurrentBranch(_workingDirectory);
-            var newBranchName = await Git.CreateNewBranch(_workingDirectory, Files);
-            await ApplyChanges(response);
-            AskToOpenFiles();
+            currentBranch = await Git.GetCurrentBranch(opts.GitRoot);
+            var newBranchName = await Git.CreateNewBranch(opts.GitRoot, files);
+            await ApplyChanges(response, files);
+            GitHelpers.AskToOpenFiles(files);
+            await GitHelpers.AskToKeepChanges(opts.GitRoot, currentBranch, newBranchName);
 
-            if (AskToKeepChanges())
-            {
-                await Git.CommitChanges(_workingDirectory, "Changes made by Claudia AI");
-                await Git.MergeChanges(_workingDirectory, currentBranch, newBranchName);
-            }
-            else
-            {
-                await Git.SwitchToBranch(_workingDirectory, currentBranch);
-                await Git.DeleteBranch(_workingDirectory, newBranchName);
-            }
 
             Console.WriteLine("Script execution completed.");
         }
         catch (Exception e)
         {
             Console.WriteLine($"An error occurred: {e.Message}");
-            Console.Write("Do you want to abandon changes? (y/n): ");
-            if (Console.ReadLine().ToLower() == "y")
-            {
-                await Git.SwitchToBranch(_workingDirectory, currentBranch);
-                Console.WriteLine("Changes abandoned. Switched back to the original branch.");
-            }
-            else
-            {
-                Console.WriteLine("Attempting to merge changes despite the error...");
-                try
-                {
-                    var currentBranchName = await Git.GetCurrentBranch(_workingDirectory);
-                    await Git.CommitChanges(_workingDirectory, "Changes made by Claudia AI (with errors)");
-                    await Git.MergeChanges(_workingDirectory, currentBranch, currentBranchName);
-                    Console.WriteLine("Changes merged successfully.");
-                }
-                catch (Exception mergeEx)
-                {
-                    Console.WriteLine($"Error merging changes: {mergeEx.Message}");
-                    Console.WriteLine("You may need to resolve conflicts manually.");
-                }
-            }
+            await GitHelpers.AskToAbandonChanges(opts.GitRoot, currentBranch);
         }
     }
 
-    static async Task<bool> HasUncommittedChanges()
+    private static async Task<string> GetSystemPrompt(CliOptions opts)
     {
-        try
+        var systemPrompt = "";
+        if (string.IsNullOrEmpty(opts.SystemPrompt)) return systemPrompt;
+        if (File.Exists(opts.SystemPrompt))
         {
-            var result = await Cli.Wrap("git")
-                .WithArguments("status --porcelain")
-                .WithWorkingDirectory(_workingDirectory)
-                .ExecuteBufferedAsync();
+            systemPrompt = await File.ReadAllTextAsync(opts.SystemPrompt);
+        }
 
-            return !string.IsNullOrWhiteSpace(result.StandardOutput);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error checking for uncommitted changes: {ex.Message}");
-            return false;
-        }
+        return systemPrompt;
     }
 
-    static void SetupApiKey()
+    private static void SetupApiKey()
     {
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>()
             .Build();
 
-        string apiKey = config["clood-key"] ?? throw new Exception("Missing clood-key in user secrets.");
-        _anthropic = new Anthropic
+        var apiKey = config["clood-key"] ?? throw new Exception("Missing clood-key in user secrets.");
+        anthropic = new Anthropic
         {
             ApiKey = apiKey
         };
     }
 
-    static async Task HandleFileInput(string[] args)
-    {
-        if (args.Length > 0)
-        {
-            Files.AddRange(args);
-            Console.WriteLine("Files we are working on:");
-            foreach (var file in Files)
-            {
-                Console.WriteLine($"- {file}");
-            }
-
-            _workingDirectory = Path.GetDirectoryName(Files[0]);
-        }
-        else
-        {
-            Console.WriteLine("No files were specified.");
-        }
-    }
-
-    static string GetUserPrompt()
+    private static string GetUserPrompt()
     {
         Console.WriteLine("Enter your prompt for Claudia:");
         return Console.ReadLine();
     }
 
-    static async Task<string?> SendRequestToClaudia(string prompt)
+    private static async Task<string?> SendRequestToClaudia(string prompt, string systemPrompt, List<string> files)
     {
         try
         {
-            var sources = Files.Select(f =>
+            var sources = files.Select(f =>
                 new Content(File.ReadAllText(f)));
 
-            var instruction = "Please provide your response as a JSON dictionary where the keys are the file names " +
-                              "and the values are the new contents of each modified file. " +
-                              $"The files are {string.Join(',', Files.Select(Path.GetFileName))}. They are in the same order as the upload." +
-                              "Only include files in the JSON that you've modified.";
 
-            var message = await _anthropic.Messages.CreateAsync(new()
+            var instruction = "";
+            if (!string.IsNullOrEmpty(systemPrompt))
+            {
+                instruction = systemPrompt;
+            }
+
+            instruction += "\nPlease provide your response as a JSON dictionary where the keys are the file names " +
+                           "and the values are the new contents of each modified file. " +
+                           $"The files are {string.Join(',', files.Select(Path.GetFileName))}. They are in the same order as the upload. " +
+                           "Only include files in the JSON that you've modified.";
+
+
+            var message = await anthropic.Messages.CreateAsync(new()
             {
                 Model = Models.Claude3_5Sonnet,
                 MaxTokens = 4000,
-                Messages =
-                [
-                    new()
-                    {
-                        Role = Roles.User,
-                        Content =
-                        [
-                            ..sources,
-                            instruction,
-                            prompt
-                        ]
-                    }
-                ]
+                Messages = [new() { Role = Roles.User, Content = [..sources, instruction, prompt] }]
             });
 
             return message.Content[0].Text;
@@ -215,12 +162,11 @@ class Program
         }
     }
 
-
-    static async Task ApplyChanges(string response)
+    private static async Task ApplyChanges(string response, List<string> files)
     {
         try
         {
-            string jsonContent = ExtractJsonFromMarkdown(response);
+            var jsonContent = ExtractJsonFromMarkdown(response);
             if (string.IsNullOrEmpty(jsonContent))
             {
                 Console.WriteLine("Error: No JSON content found in the response.");
@@ -236,7 +182,7 @@ class Program
 
             foreach (var (fileName, content) in fileContents)
             {
-                var fullPath = Files.FirstOrDefault(f => Path.GetFileName(f) == fileName);
+                var fullPath = files.FirstOrDefault(f => Path.GetFileName(f) == fileName);
                 if (fullPath == null)
                 {
                     Console.WriteLine($"Warning: File '{fileName}' not found in the provided files list.");
@@ -255,7 +201,7 @@ class Program
         }
     }
 
-    static string ExtractJsonFromMarkdown(string markdown)
+    private static string ExtractJsonFromMarkdown(string markdown)
     {
         var pipeline = new MarkdownPipelineBuilder().Build();
         var document = Markdown.Parse(markdown, pipeline);
@@ -268,56 +214,21 @@ class Program
         return string.Join(Environment.NewLine, jsonBlock.Lines.Lines);
     }
 
-    static Dictionary<string, string> ExtractFileContentsFromResponse(string response)
+    private static async Task<bool> HasUncommittedChanges(string gitRoot)
     {
-        var fileContents = new Dictionary<string, string>();
-        var lines = response.Split('\n');
-        string currentFileName = null;
-        var currentContent = new List<string>();
-        bool inCodeBlock = false;
-
-        foreach (var line in lines)
+        try
         {
-            if (!inCodeBlock && !line.StartsWith("```"))
-            {
-                currentFileName = line.Trim();
-            }
-            else if (line.StartsWith("```"))
-            {
-                if (inCodeBlock)
-                {
-                    // End of code block
-                    fileContents[currentFileName] = string.Join("\n", currentContent);
-                    currentFileName = null;
-                    currentContent.Clear();
-                }
+            var result = await Cli.Wrap("git")
+                .WithArguments("status --porcelain")
+                .WithWorkingDirectory(gitRoot)
+                .ExecuteBufferedAsync();
 
-                inCodeBlock = !inCodeBlock;
-            }
-            else if (inCodeBlock)
-            {
-                currentContent.Add(line);
-            }
+            return !string.IsNullOrWhiteSpace(result.StandardOutput);
         }
-
-        return fileContents;
-    }
-
-    static void AskToOpenFiles()
-    {
-        Console.Write("Do you want to open the modified files in your current editor? (y/n): ");
-        if (Console.ReadLine().ToLower() == "y")
+        catch (Exception ex)
         {
-            foreach (var file in Files)
-            {
-                Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
-            }
+            Console.WriteLine($"Error checking for uncommitted changes: {ex.Message}");
+            return false;
         }
-    }
-
-    static bool AskToKeepChanges()
-    {
-        Console.Write("Do you want to keep the changes? (y/n): ");
-        return Console.ReadLine().ToLower() == "y";
     }
 }

@@ -16,8 +16,8 @@ public static class Git
 
     public static async Task<string> CreateNewBranch(string workingDirectory, List<string> files)
     {
-        string filesList = string.Join(",", files.Select(Path.GetFileName).Take(4));
-        string baseBranchName = $"Modifications-{filesList}";
+        var filesList = string.Join(",", files.Select(Path.GetFileName).Take(4));
+        var baseBranchName = $"Modifications-{filesList}";
     
         // Remove invalid characters and truncate if necessary
         baseBranchName = new string(baseBranchName.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_').ToArray());
@@ -26,8 +26,8 @@ public static class Git
             baseBranchName = baseBranchName.Substring(0, 47) + "...";
         }
 
-        string branchName = baseBranchName;
-        int counter = 1;
+        var branchName = baseBranchName;
+        var counter = 1;
 
         while (await BranchExists(workingDirectory, branchName))
         {
