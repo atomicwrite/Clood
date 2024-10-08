@@ -128,7 +128,7 @@ public static class Clood
         {
             var sources = files.Select(f =>
                 new Content(File.ReadAllText(f)));
-            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(f => f, File.ReadAllText));
+            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(Path.GetFileName, File.ReadAllText));
 
             var instruction = $$"""
                               You are tasked with applying a specific prompt to multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
