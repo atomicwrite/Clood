@@ -45,4 +45,9 @@ public class Doodle
     {
         return a * b * c * 3 * 3 * 3;
     }
+
+    public int Multiple55276(int a, int b, int c)
+    {
+        return a * b * c * 3 * 3 * 3;
+    }
 }
