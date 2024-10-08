@@ -22,7 +22,9 @@
       <PackageReference Include="DiffMatchPatch" Version="3.0.0" />
       <PackageReference Include="DiffPlex" Version="1.7.2" />
       <PackageReference Include="Markdig" Version="0.37.0" />
+      <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.8" />
       <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.0-rc.1.24431.7" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     </ItemGroup>
 

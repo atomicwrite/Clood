@@ -5,9 +5,10 @@ namespace Clood;
 
 public static class Git
 {
+    public static string  PathToGit { get; set; } = "git";
     public static async Task<string> GetCurrentBranch(string workingDirectory)
     {
-        var result = await Cli.Wrap("git")
+        var result = await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments("rev-parse --abbrev-ref HEAD")
             .ExecuteBufferedAsync();
@@ -35,7 +36,8 @@ public static class Git
             counter++;
         }
 
-        await Cli.Wrap("git")
+        
+        await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments($"checkout -b {branchName}")
             .ExecuteAsync();
@@ -48,7 +50,7 @@ public static class Git
     {
         try
         {
-            var result = await Cli.Wrap("git")
+            var result = await Cli.Wrap(PathToGit)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"rev-parse --verify {branchName}")
                 .ExecuteBufferedAsync();
@@ -62,12 +64,12 @@ public static class Git
 
     public static async Task CommitChanges(string workingDirectory, string message)
     {
-        await Cli.Wrap("git")
+        await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments("add .")
             .ExecuteAsync();
 
-        await Cli.Wrap("git")
+        await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments($"commit -m \"{message}\"")
             .ExecuteAsync();
@@ -84,7 +86,7 @@ public static class Git
         await SwitchToBranch(workingDirectory, currentBranch);
 
         // Merge the new branch
-        await Cli.Wrap("git")
+        await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments($"merge {newBranchName}")
             .ExecuteAsync();
@@ -94,7 +96,7 @@ public static class Git
 
     public static async Task SwitchToBranch(string workingDirectory, string branchName)
     {
-        await Cli.Wrap("git")
+        await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments($"checkout {branchName}")
             .ExecuteAsync();
@@ -103,7 +105,7 @@ public static class Git
 
     public static async Task DeleteBranch(string workingDirectory, string branchName)
     {
-        await Cli.Wrap("git")
+        await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments($"branch -D {branchName}")
             .ExecuteAsync();

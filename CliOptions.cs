@@ -6,6 +6,12 @@ namespace Clood;
 
 public class CliOptions
 {
+    [Option('m', "server", Required = false, HelpText = "start a server")]
+    public bool Server { get; set; }
+    
+    [Option('u', "server-urls", Required = false, HelpText = "Minimal api run urls")]
+    public string Urls { get; set; }
+    
     [Option('v', "version", Required = false, HelpText = "Print the version and quit")]
     public bool Version { get; set; }
     
@@ -15,7 +21,7 @@ public class CliOptions
     [Option('r', "git-root", Required = true, HelpText = "The Git root ")]
     public string GitRoot { get; set; }
     
-    [Option('p', "prompt", Required = true, HelpText = "Prompt for Claude AI.")]
+    [Option('p', "prompt", Required = false, HelpText = "Prompt for Claude AI.")]
     public string Prompt { get; set; }
 
     [Option('s', "system-prompt", Required = false, HelpText = "c:\\sysprompt.md")]
@@ -27,7 +33,11 @@ public class CliOptions
     public bool Validate()
     {
         bool isValid = true;
-
+        if (Server)
+        {
+            
+            return true;
+        }
         // Check if GitPath exists (if specified)
         if (!string.IsNullOrEmpty(GitPath) && !File.Exists(GitPath))
         {
@@ -37,6 +47,11 @@ public class CliOptions
         if (!string.IsNullOrEmpty(SystemPrompt) && !File.Exists(SystemPrompt))
         {
             Console.WriteLine($"Error: Specified SystemPrompt path does not exist: {SystemPrompt}");
+            isValid = false;
+        }
+        if (!string.IsNullOrEmpty(Prompt) )
+        {
+            Console.WriteLine($"Error: Prompt was not provided: ");
             isValid = false;
         }
 
