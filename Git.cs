@@ -5,7 +5,7 @@ namespace Clood;
 
 public static class Git
 {
-    public static string  PathToGit { get; set; } = "git";
+    public static string PathToGit { get; set; } = "git";
     public static async Task<string> GetCurrentBranch(string workingDirectory)
     {
         var result = await Cli.Wrap(PathToGit)
@@ -64,17 +64,19 @@ public static class Git
 
     public static async Task CommitChanges(string workingDirectory, string message)
     {
+        // First, add all changes
         await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments("add .")
             .ExecuteAsync();
 
+        // Then, commit the changes
         await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments($"commit -m \"{message}\"")
             .ExecuteAsync();
 
-        Console.WriteLine("Changes committed successfully.");
+        Console.WriteLine("Changes added and committed successfully.");
     }
 
     public static async Task MergeChanges(string workingDirectory, string currentBranch, string newBranchName)
