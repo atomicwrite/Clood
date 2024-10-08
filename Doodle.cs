@@ -25,4 +25,9 @@ public class Doodle
         }
         return a / b;
     }
+
+    public int Multiple52(int a, int b, int c)
+    {
+        return a * b * c;
+    }
 }
