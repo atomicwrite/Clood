@@ -208,7 +208,7 @@ public static class Clood
     {
         foreach (var (fileName, content) in fileContents)
         {
-            var fullPath = files.FirstOrDefault(f => Path.GetFileName(f) == fileName);
+            var fullPath = files.FirstOrDefault(f => f == fileName);
             if (fullPath == null)
             {
                 Console.WriteLine($"Warning: File '{fileName}' not found in the provided files list.");
