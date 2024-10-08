@@ -24,7 +24,7 @@ public static class Clood
         SetupApiKey();
         if (opts.Server)
         {
-            CloodServer.Start( opts.Urls);
+            CloodServer.Start(opts.Urls);
         }
 
         if (!string.IsNullOrEmpty(opts.GitPath))
@@ -34,7 +34,6 @@ public static class Clood
 
         Console.WriteLine("Welcome to the Claudia API and Git Integration Script!");
 
-       
 
         var files = opts.Files.ToList();
         if (files.Count == 0)
@@ -77,7 +76,11 @@ public static class Clood
         {
             currentBranch = await Git.GetCurrentBranch(opts.GitRoot);
             var newBranchName = await Git.CreateNewBranch(opts.GitRoot, files);
-            await ApplyChanges(response, files);
+            var fileContents = ClaudiaHelper.Claudia2Json(response) ??
+                               throw new JsonException($"Response from claude was invalid json {response}");
+
+            await ApplyChanges(
+                fileContents, files);
             GitHelpers.AskToOpenFiles(files);
             await GitHelpers.AskToKeepChanges(opts.GitRoot, currentBranch, newBranchName);
 
@@ -128,68 +131,52 @@ public static class Clood
         {
             var sources = files.Select(f =>
                 new Content(File.ReadAllText(f)));
-            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(Path.GetFileName, File.ReadAllText));
-
-            var instruction = $$"""
-                              You are tasked with applying a specific prompt to multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
-
-                              1. You will be given a dictionary where the filename is the key and the value is the content, a prompt to apply, and the contents of multiple code files.
-
-                              2. The file dictionary is as follows:
-                              <file_dictionary>
-                              {{filesDict}}
-                               </file_dictionary>
-
-                              3. The prompt to apply to each file is:
-                              <prompt>
-                              {{prompt}}
-                              </prompt>
-
-                              4. For each file:
-                                 a. Read the file's content
-                                 b. Apply the given prompt to the file's content
-                                 c. Generate the modified content based on the prompt
-                                 
-
-                              5. After processing all files, format your response as a JSON dictionary where:
-                                 - The keys are the file names (as listed in step 2)
-                                 - The values are the new contents of each modified file
-
-
-                              6. Ensure that the JSON is properly formatted and escaped, especially for multi-line code contents.
-
-                              Here's an example of how your output should be structured:
-
-                              ```json
-                              {
-                                "file1.py": "# Modified content of file1.py\n...",
-                                "file2.js": "// Modified content of file2.js\n...",
-                                "file3.cpp": "// Modified content of file3.cpp\n..."
-                              
-                              }
-                              ```
-
-                              Remember to process all files provided and include them in the final JSON output.
-                              """;
+            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a=>a, File.ReadAllText));
+            var instruction = "";
             if (!string.IsNullOrEmpty(systemPrompt))
             {
                 instruction = systemPrompt;
             }
 
-            instruction += $"""
-                           1. You will be given a prompt by the user 
-                           <PROMPT>
-                           {prompt}
-                            </PROMPT>
+            instruction = $$"""
+                            You are tasked with applying a specific prompt to multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
+
+                            1. You will be given a dictionary where the filename is the key and the value is the content, a prompt to apply, and the contents of multiple code files.
+
+                            2. The file dictionary is as follows:
+                            <file_dictionary>
+                            {{filesDict}}
+                             </file_dictionary>
+
+                            3. The prompt to apply to each file is:
+                            <prompt>
+                            {{prompt}}
+                            </prompt>
+
+                            4. Read all the files, some may not need to be changed and are just there for context:
+                              a. Generate the modified content based on the prompt
+                               
                             
-                           Please provide your response as a JSON dictionary where the keys are the file names 
-                           """ +
-                           
-                           
-                           "and the values are the new contents of each modified file. " +
-                           $"The files are {string.Join(',', files.Select(Path.GetFileName))}. " +
-                           $"They are in the same order as the upload. " +
-                           "Only include files in the JSON that you've modified. Format your answer in markdown";
+                            5. After processing all files, format your response as a JSON dictionary where:
+                               - The keys are the file names (as listed in step 2)
+                               - The values are the new contents of each modified file
+
+
+                            6. Ensure that the JSON is properly formatted and escaped, especially for multi-line code contents.
+
+                            Here's an example of how your output should be structured:
+
+                            ```json
+                            {
+                              "file1.py": "# Modified content of file1.py\n...",
+                              "file2.js": "// Modified content of file2.js\n...",
+                              "file3.cpp": "// Modified content of file3.cpp\n..."
+
+                            }
+                            ```
+
+                            Remember to process all files provided and include them in the final JSON output.
+                            """;
 
 
             var message = await anthropic.Messages.CreateAsync(new()
@@ -209,56 +196,20 @@ public static class Clood
         }
     }
 
-    public static async Task ApplyChanges(string response, List<string> files)
+    public static async Task ApplyChanges(Dictionary<string, string> fileContents, List<string> files)
     {
-        try
+        foreach (var (fileName, content) in fileContents)
         {
-            var jsonContent = ExtractJsonFromMarkdown(response);
-            if (string.IsNullOrEmpty(jsonContent))
+            var fullPath = files.FirstOrDefault(f => Path.GetFileName(f) == fileName);
+            if (fullPath == null)
             {
-                Console.WriteLine("Error: No JSON content found in the response.");
-                return;
+                Console.WriteLine($"Warning: File '{fileName}' not found in the provided files list.");
+                continue;
             }
 
-            var fileContents = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
-            if (fileContents == null)
-            {
-                Console.WriteLine("Error: Unable to parse the JSON response from Claude.");
-                return;
-            }
-
-            foreach (var (fileName, content) in fileContents)
-            {
-                var fullPath = files.FirstOrDefault(f => Path.GetFileName(f) == fileName);
-                if (fullPath == null)
-                {
-                    Console.WriteLine($"Warning: File '{fileName}' not found in the provided files list.");
-                    continue;
-                }
-
-                await File.WriteAllTextAsync(fullPath, content);
-                Console.WriteLine($"Updated file: {fileName}");
-            }
+            await File.WriteAllTextAsync(fullPath, content);
+            Console.WriteLine($"Updated file: {fileName}");
         }
-        catch (JsonException ex)
-        {
-            Console.WriteLine($"Error parsing JSON response: {ex.Message}");
-            Console.WriteLine("Raw response:");
-            Console.WriteLine(response);
-        }
-    }
-
-    private static string ExtractJsonFromMarkdown(string markdown)
-    {
-        var pipeline = new MarkdownPipelineBuilder().Build();
-        var document = Markdown.Parse(markdown, pipeline);
-
-        var codeBlocks = document.Descendants<FencedCodeBlock>();
-        var jsonBlock = codeBlocks.FirstOrDefault(block =>
-            block.Info.Equals("json", StringComparison.OrdinalIgnoreCase));
-
-        if (jsonBlock == null) return string.Empty;
-        return string.Join(Environment.NewLine, jsonBlock.Lines.Lines);
     }
 
     public static async Task<bool> HasUncommittedChanges(string gitRoot)
