@@ -30,4 +30,9 @@ public class Doodle
     {
         return a * b * c;
     }
+
+    public int Multiple552(int a, int b, int c)
+    {
+        return a * b * c * 3;
+    }
 }
