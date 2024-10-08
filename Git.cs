@@ -67,7 +67,7 @@ public static class Git
         // First, add all changes
         await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
-            .WithArguments("add .")
+            .WithArguments("add *")
             .ExecuteAsync();
 
         // Then, commit the changes
