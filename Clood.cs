@@ -21,6 +21,7 @@ public static class Clood
             return;
         }
 
+        SetupApiKey();
         if (opts.Server)
         {
             CloodServer.Start( opts.Urls);
@@ -33,7 +34,7 @@ public static class Clood
 
         Console.WriteLine("Welcome to the Claudia API and Git Integration Script!");
 
-        SetupApiKey();
+       
 
         var files = opts.Files.ToList();
         if (files.Count == 0)
