@@ -7,7 +7,7 @@ namespace Clood;
 
 public static class ClaudiaHelper
 {
-    public static Dictionary<string, string>? Claudia2Json(string response)
+    public static FileChanges? Claudia2Json(string response)
     {
         try
         {
@@ -18,8 +18,8 @@ public static class ClaudiaHelper
                 return null;
             }
 
-            var fileContents = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
-            return fileContents;
+            var fileChanges = JsonConvert.DeserializeObject<FileChanges>(jsonContent);
+            return fileChanges;
         }
         catch (JsonException e)
         {
@@ -32,7 +32,6 @@ public static class ClaudiaHelper
             return null;
         }
     }
-
     private static string ExtractJsonFromMarkdown(string markdown)
     {
         var pipeline = new MarkdownPipelineBuilder().Build();
@@ -79,4 +78,20 @@ public static class ClaudiaHelper
         }
         throw new Exception($"Failed after {maxRetries} attempts due to overloaded errors.");
     }
+}
+
+
+
+
+
+public class FileChanges
+{
+    public List<FileContent> ChangedFiles { get; set; } = new List<FileContent>();
+    public List<FileContent> NewFiles { get; set; } = new List<FileContent>();
+}
+
+public class FileContent
+{
+    public string Filename { get; set; }
+    public string Content { get; set; }
 }

@@ -81,17 +81,17 @@ public static class CloodApi
             return Results.BadRequest("No valid response from Claude AI.");
         }
 
-        var fileContents = ClaudiaHelper.Claudia2Json(response);
-        if (fileContents == null)
+        var fileChanges = ClaudiaHelper.Claudia2Json(response);
+        if (fileChanges == null)
         {
             return Results.BadRequest($"No valid response from Claude AI. {response} ");
         }
 
-        session.ProposedChanges = fileContents;
+        session.ProposedChanges = fileChanges;
 
         if (request.UseGit)
         {
-            await Clood.ApplyChanges(fileContents!, request.Files);
+            await Clood.ApplyChanges(fileChanges, request.GitRoot);
         }
 
         if (!Sessions.TryAdd(sessionId, session))
@@ -105,7 +105,11 @@ public static class CloodApi
         }
 
         return Results.Ok(new CloodResponse
-            { Id = sessionId, NewBranch = session.NewBranch, ProposedChanges = session.ProposedChanges });
+        {
+            Id = sessionId,
+            NewBranch = session.NewBranch,
+            ProposedChanges = session.ProposedChanges
+        });
     }
 
     private static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request)
@@ -128,7 +132,7 @@ public static class CloodApi
                 // Commit changes using the new CommitSpecificFiles method
                 var commitSuccess = await Git.CommitSpecificFiles(
                     session.GitRoot,
-                    session.Files,
+                    session.ProposedChanges.ChangedFiles.Select(f => f.Filename).Concat(session.ProposedChanges.NewFiles.Select(f => f.Filename)).ToList(),
                     $"Changes made by Claudia AI on branch {session.NewBranch}"
                 );
 

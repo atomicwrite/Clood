@@ -62,12 +62,16 @@ public static class Clood
 
         var response = await SendRequestToClaudia(prompt, systemPrompt, files);
 
-        Console.WriteLine("Claudia's response:");
-        Console.WriteLine((string?)response);
-
         if (string.IsNullOrWhiteSpace(response))
         {
             Console.WriteLine("No valid response found.");
+            return;
+        }
+
+        var fileChanges = ClaudiaHelper.Claudia2Json(response);
+        if (fileChanges == null)
+        {
+            Console.WriteLine($"No valid response from Claude AI. {response}");
             return;
         }
 
@@ -79,8 +83,8 @@ public static class Clood
             var fileContents = ClaudiaHelper.Claudia2Json(response) ??
                                throw new JsonException($"Response from claude was invalid json {response}");
 
-            await ApplyChanges(
-                fileContents, files);
+    
+            await ApplyChanges(fileChanges, opts.GitRoot);
             GitHelpers.AskToOpenFiles(files);
             await GitHelpers.AskToKeepChanges(opts.GitRoot, currentBranch, newBranchName);
 
@@ -110,19 +114,25 @@ public static class Clood
     {
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>()
+            .AddEnvironmentVariables()
             .Build();
 
-        var apiKey = config["clood-key"] ?? throw new Exception("Missing clood-key in user secrets.");
+        var apiKey = config["clood-key"];
+        
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new Exception("Missing clood-key in user secrets or environment variables.");
+        }
+
+        if (Environment.GetEnvironmentVariable("clood-key") != null)
+        {
+            Console.WriteLine("Warning: Using clood-key from environment variable is unsafe.");
+        }
+
         anthropic = new Anthropic
         {
             ApiKey = apiKey
         };
-    }
-
-    private static string GetUserPrompt()
-    {
-        Console.WriteLine("Enter your prompt for Claudia:");
-        return Console.ReadLine();
     }
 
     public static async Task<string?> SendRequestToClaudia(string prompt, string systemPrompt, List<string> files)
@@ -157,12 +167,11 @@ public static class Clood
 
                                 4. Read all the files, some may not need to be changed and are just there for context:
                                   a. Generate the modified content based on the prompt
-                                   
+                                  b. If new files need to be created, include them in the output
                                 
-                                5. After processing all files, format your response as a JSON dictionary where:
-                                   - The keys are the file names (as listed in step 2)
-                                   - The values are the new contents of each modified file
-
+                                5. After processing all files, format your response as a JSON object with two arrays:
+                                   - "changedFiles": An array of objects, each containing "filename" and "content" for modified existing files
+                                   - "newFiles": An array of objects, each containing "filename" and "content" for newly created files
 
                                 6. Ensure that the JSON is properly formatted and escaped, especially for multi-line code contents.
 
@@ -170,16 +179,18 @@ public static class Clood
 
                                 ```json
                                 {
-                                  "file1.py": "# Modified content of file1.py\n...",
-                                  "file2.js": "// Modified content of file2.js\n...",
-                                  "file3.cpp": "// Modified content of file3.cpp\n..."
-
+                                  "changedFiles": [
+                                    {"filename": "file1.py", "content": "# Modified content of file1.py\n..."},
+                                    {"filename": "file2.js", "content": "// Modified content of file2.js\n..."}
+                                  ],
+                                  "newFiles": [
+                                    {"filename": "newfile.cpp", "content": "// Content of new file\n..."}
+                                  ]
                                 }
                                 ```
 
-                                Remember to process all files provided and include them in the final JSON output.
+                                Remember to include all modified files in the "changedFiles" array and any new files in the "newFiles" array.
                                 """;
-
 
                 var message = await anthropic.Messages.CreateAsync(new()
                 {
@@ -204,19 +215,20 @@ public static class Clood
         });
     }
 
-    public static async Task ApplyChanges(Dictionary<string, string> fileContents, List<string> files)
+    public static async Task ApplyChanges(FileChanges fileChanges, string gitRoot)
     {
-        foreach (var (fileName, content) in fileContents)
+        foreach (var file in fileChanges.ChangedFiles)
         {
-            var fullPath = files.FirstOrDefault(f => f == fileName);
-            if (fullPath == null)
-            {
-                Console.WriteLine($"Warning: File '{fileName}' not found in the provided files list.");
-                continue;
-            }
+            var fullPath = Path.Combine(gitRoot, file.Filename);
+            await File.WriteAllTextAsync(fullPath, file.Content);
+            Console.WriteLine($"Updated file: {file.Filename}");
+        }
 
-            await File.WriteAllTextAsync(fullPath, content);
-            Console.WriteLine($"Updated file: {fileName}");
+        foreach (var file in fileChanges.NewFiles)
+        {
+            var fullPath = Path.Combine(gitRoot, file.Filename);
+            await File.WriteAllTextAsync(fullPath, file.Content);
+            Console.WriteLine($"Created new file: {file.Filename}");
         }
     }
 
