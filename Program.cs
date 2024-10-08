@@ -21,6 +21,16 @@ internal class Program
     private static async Task Main(string[] args)
     {
         await Parser.Default.ParseArguments<CliOptions>(args)
-            .WithParsedAsync(async (opts) => await Clood.RunWithOptions(opts));
+            .WithParsedAsync(async (opts) => 
+            {
+                if (opts.Validate())
+                {
+                    await Clood.RunWithOptions(opts);
+                }
+                else
+                {
+                    Console.WriteLine("Invalid options. Please check your command-line arguments.");
+                }
+            });
     }
 }

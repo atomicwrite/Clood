@@ -21,7 +21,19 @@ public static class Clood
             return;
         }
 
-        SetupApiKey();
+        if (!string.IsNullOrEmpty(opts.SetApiKey))
+        {
+            await SetApiKeyAsync(opts.SetApiKey, opts);
+            return;
+        }
+
+        if (opts.CheckApiKey)
+        {
+            await CheckApiKeyAsync(opts);
+            return;
+        }
+
+        await SetupApiKeyAsync(opts);
         if (opts.Server)
         {
             CloodServer.Start(opts.Urls);
@@ -34,14 +46,12 @@ public static class Clood
 
         Console.WriteLine("Welcome to the Claudia API and Git Integration Script!");
 
-
         var files = opts.Files.ToList();
         if (files.Count == 0)
         {
             Console.WriteLine("No files were specified.");
             return;
         }
-
 
         Console.WriteLine("Files we are working on:");
         foreach (var file in files)
@@ -79,11 +89,9 @@ public static class Clood
             var fileContents = ClaudiaHelper.Claudia2Json(response) ??
                                throw new JsonException($"Response from claude was invalid json {response}");
 
-            await ApplyChanges(
-                fileContents, files);
+            await ApplyChanges(fileContents, files);
             GitHelpers.AskToOpenFiles(files);
             await GitHelpers.AskToKeepChanges(opts.GitRoot, currentBranch, newBranchName);
-
 
             Console.WriteLine("Script execution completed.");
         }
@@ -92,6 +100,97 @@ public static class Clood
             Console.WriteLine($"An error occurred: {e.Message}");
             await GitHelpers.AskToAbandonChanges(opts.GitRoot, currentBranch);
         }
+    }
+private static async Task SetApiKeyAsync(string apiKey, CliOptions opts)
+    {
+        if (opts.UseWindowsCredential)
+        {
+            CloudKeyManager.SetApiKeyWindowsCredential(apiKey);
+            Console.WriteLine("API key has been securely stored in Windows Credential Manager.");
+        }
+        else if (!string.IsNullOrEmpty(opts.AwsSecretName) && !string.IsNullOrEmpty(opts.AwsRegion))
+        {
+            await CloudKeyManager.SetApiKeyAwsAsync(apiKey, opts.AwsSecretName, opts.AwsRegion);
+            Console.WriteLine("API key has been securely stored in AWS Secrets Manager.");
+        }
+        else if (!string.IsNullOrEmpty(opts.AzureKeyVaultName) && !string.IsNullOrEmpty(opts.AzureSecretName))
+        {
+            await CloudKeyManager.SetApiKeyAzureAsync(apiKey, opts.AzureKeyVaultName, opts.AzureSecretName);
+            Console.WriteLine("API key has been securely stored in Azure Key Vault.");
+        }
+        else
+        {
+            ExpandedApiKeyManager.SetApiKeyFile(apiKey);
+            Console.WriteLine("API key has been securely stored in a local file.");
+        }
+    }
+
+    private static async Task CheckApiKeyAsync(CliOptions opts)
+    {
+        string apiKey = null;
+
+        if (opts.UseWindowsCredential)
+        {
+            apiKey = CloudKeyManager.GetApiKeyWindowsCredential();
+            Console.WriteLine("API key retrieved from Windows Credential Manager.");
+        }
+        else if (!string.IsNullOrEmpty(opts.AwsSecretName) && !string.IsNullOrEmpty(opts.AwsRegion))
+        {
+            apiKey = await CloudKeyManager.GetApiKeyAwsAsync(opts.AwsSecretName, opts.AwsRegion);
+            Console.WriteLine("API key retrieved from AWS Secrets Manager.");
+        }
+        else if (!string.IsNullOrEmpty(opts.AzureKeyVaultName) && !string.IsNullOrEmpty(opts.AzureSecretName))
+        {
+            apiKey = await CloudKeyManager.GetApiKeyAzureAsync(opts.AzureKeyVaultName, opts.AzureSecretName);
+            Console.WriteLine("API key retrieved from Azure Key Vault.");
+        }
+        else
+        {
+            apiKey = ExpandedApiKeyManager.GetApiKeyFile();
+            Console.WriteLine("API key retrieved from local file.");
+        }
+
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            Console.WriteLine("No API key found.");
+        }
+        else
+        {
+            Console.WriteLine($"API key found: {apiKey.Substring(0, 4)}...{apiKey.Substring(apiKey.Length - 4)}");
+        }
+    }
+
+    private static async Task SetupApiKeyAsync(CliOptions opts)
+    {
+        var config = new ConfigurationBuilder()
+            .AddUserSecrets<Program>()
+            .Build();
+
+        string apiKey = null;
+
+        if (!string.IsNullOrEmpty(opts.AwsSecretName) && !string.IsNullOrEmpty(opts.AwsRegion))
+        {
+            apiKey = await CloudKeyManager.GetApiKeyAwsAsync(opts.AwsSecretName, opts.AwsRegion);
+        }
+        else if (!string.IsNullOrEmpty(opts.AzureKeyVaultName) && !string.IsNullOrEmpty(opts.AzureSecretName))
+        {
+            apiKey = await CloudKeyManager.GetApiKeyAzureAsync(opts.AzureKeyVaultName, opts.AzureSecretName);
+        }
+        else
+        {
+            apiKey = config["clood-key"] ?? ExpandedApiKeyManager.GetApiKeyFile();
+        }
+
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            Console.WriteLine("API key not found. Please set it using one of the SetApiKey methods.");
+            Environment.Exit(1);
+        }
+
+        anthropic = new Anthropic
+        {
+            ApiKey = apiKey
+        };
     }
 
     private static async Task<string> GetSystemPrompt(CliOptions opts)
@@ -104,25 +203,6 @@ public static class Clood
         }
 
         return systemPrompt;
-    }
-
-    private static void SetupApiKey()
-    {
-        var config = new ConfigurationBuilder()
-            .AddUserSecrets<Program>()
-            .Build();
-
-        var apiKey = config["clood-key"] ?? throw new Exception("Missing clood-key in user secrets.");
-        anthropic = new Anthropic
-        {
-            ApiKey = apiKey
-        };
-    }
-
-    private static string GetUserPrompt()
-    {
-        Console.WriteLine("Enter your prompt for Claudia:");
-        return Console.ReadLine();
     }
 
     public static async Task<string?> SendRequestToClaudia(string prompt, string systemPrompt, List<string> files)
@@ -179,7 +259,6 @@ public static class Clood
 
                                 Remember to process all files provided and include them in the final JSON output.
                                 """;
-
 
                 var message = await anthropic.Messages.CreateAsync(new()
                 {
