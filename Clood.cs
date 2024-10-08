@@ -127,73 +127,81 @@ public static class Clood
 
     public static async Task<string?> SendRequestToClaudia(string prompt, string systemPrompt, List<string> files)
     {
-        try
+        return await ClaudiaHelper.RetryOnOverloadedError(async () =>
         {
-            var sources = files.Select(f =>
-                new Content(File.ReadAllText(f)));
-            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a=>a, File.ReadAllText));
-            var instruction = "";
-            if (!string.IsNullOrEmpty(systemPrompt))
+            try
             {
-                instruction = systemPrompt;
+                var sources = files.Select(f =>
+                    new Content(File.ReadAllText(f)));
+                var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
+                var instruction = "";
+                if (!string.IsNullOrEmpty(systemPrompt))
+                {
+                    instruction = systemPrompt;
+                }
+
+                instruction = $$"""
+                                You are tasked with applying a specific prompt to multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
+
+                                1. You will be given a dictionary where the filename is the key and the value is the content, a prompt to apply, and the contents of multiple code files.
+
+                                2. The file dictionary is as follows:
+                                <file_dictionary>
+                                {{filesDict}}
+                                 </file_dictionary>
+
+                                3. The prompt to apply to each file is:
+                                <prompt>
+                                {{prompt}}
+                                </prompt>
+
+                                4. Read all the files, some may not need to be changed and are just there for context:
+                                  a. Generate the modified content based on the prompt
+                                   
+                                
+                                5. After processing all files, format your response as a JSON dictionary where:
+                                   - The keys are the file names (as listed in step 2)
+                                   - The values are the new contents of each modified file
+
+
+                                6. Ensure that the JSON is properly formatted and escaped, especially for multi-line code contents.
+
+                                Here's an example of how your output should be structured:
+
+                                ```json
+                                {
+                                  "file1.py": "# Modified content of file1.py\n...",
+                                  "file2.js": "// Modified content of file2.js\n...",
+                                  "file3.cpp": "// Modified content of file3.cpp\n..."
+
+                                }
+                                ```
+
+                                Remember to process all files provided and include them in the final JSON output.
+                                """;
+
+
+                var message = await anthropic.Messages.CreateAsync(new()
+                {
+                    Model = Models.Claude3_5Sonnet,
+                    MaxTokens = 4000,
+                    Messages = [new() { Role = Roles.User, Content = [..sources, instruction, prompt] }]
+                });
+
+                return message.Content[0].Text;
             }
-
-            instruction = $$"""
-                            You are tasked with applying a specific prompt to multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
-
-                            1. You will be given a dictionary where the filename is the key and the value is the content, a prompt to apply, and the contents of multiple code files.
-
-                            2. The file dictionary is as follows:
-                            <file_dictionary>
-                            {{filesDict}}
-                             </file_dictionary>
-
-                            3. The prompt to apply to each file is:
-                            <prompt>
-                            {{prompt}}
-                            </prompt>
-
-                            4. Read all the files, some may not need to be changed and are just there for context:
-                              a. Generate the modified content based on the prompt
-                               
-                            
-                            5. After processing all files, format your response as a JSON dictionary where:
-                               - The keys are the file names (as listed in step 2)
-                               - The values are the new contents of each modified file
-
-
-                            6. Ensure that the JSON is properly formatted and escaped, especially for multi-line code contents.
-
-                            Here's an example of how your output should be structured:
-
-                            ```json
-                            {
-                              "file1.py": "# Modified content of file1.py\n...",
-                              "file2.js": "// Modified content of file2.js\n...",
-                              "file3.cpp": "// Modified content of file3.cpp\n..."
-
-                            }
-                            ```
-
-                            Remember to process all files provided and include them in the final JSON output.
-                            """;
-
-
-            var message = await anthropic.Messages.CreateAsync(new()
+            catch (ClaudiaException ex)
             {
-                Model = Models.Claude3_5Sonnet,
-                MaxTokens = 4000,
-                Messages = [new() { Role = Roles.User, Content = [..sources, instruction, prompt] }]
-            });
+                if (ClaudiaHelper.IsOverloadedError(ex))
+                {
+                    throw; // This will be caught by RetryOnOverloadedError
+                }
 
-            return message.Content[0].Text;
-        }
-        catch (ClaudiaException ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-            Console.WriteLine($"Error Code: {(int)ex.Status} - {ex.Name}");
-            return null;
-        }
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"Error Code: {(int)ex.Status} - {ex.Name}");
+                return null;
+            }
+        });
     }
 
     public static async Task ApplyChanges(Dictionary<string, string> fileContents, List<string> files)
