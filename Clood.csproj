@@ -13,6 +13,7 @@
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+      <Content Include=".github\workflows\build-and-release.yaml" />
     </ItemGroup>
 
     <ItemGroup>
