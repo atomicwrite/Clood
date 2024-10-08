@@ -128,15 +128,64 @@ public static class Clood
         {
             var sources = files.Select(f =>
                 new Content(File.ReadAllText(f)));
+            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(f => f, File.ReadAllText));
+
+            var instruction = $$"""
+                              You are tasked with applying a specific prompt to multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
+
+                              1. You will be given a dictionary where the filename is the key and the value is the content, a prompt to apply, and the contents of multiple code files.
+
+                              2. The file dictionary is as follows:
+                              <file_dictionary>
+                              {{filesDict}}
+                               </file_dictionary>
+
+                              3. The prompt to apply to each file is:
+                              <prompt>
+                              {{prompt}}
+                              </prompt>
+
+                              4. For each file:
+                                 a. Read the file's content
+                                 b. Apply the given prompt to the file's content
+                                 c. Generate the modified content based on the prompt
+                                 
+
+                              5. After processing all files, format your response as a JSON dictionary where:
+                                 - The keys are the file names (as listed in step 2)
+                                 - The values are the new contents of each modified file
 
 
-            var instruction = "";
+                              6. Ensure that the JSON is properly formatted and escaped, especially for multi-line code contents.
+
+                              Here's an example of how your output should be structured:
+
+                              ```json
+                              {
+                                "file1.py": "# Modified content of file1.py\n...",
+                                "file2.js": "// Modified content of file2.js\n...",
+                                "file3.cpp": "// Modified content of file3.cpp\n..."
+                              
+                              }
+                              ```
+
+                              Remember to process all files provided and include them in the final JSON output.
+                              """;
             if (!string.IsNullOrEmpty(systemPrompt))
             {
                 instruction = systemPrompt;
             }
 
-            instruction += "\nPlease provide your response as a JSON dictionary where the keys are the file names " +
+            instruction += $"""
+                           1. You will be given a prompt by the user 
+                           <PROMPT>
+                           {prompt}
+                            </PROMPT>
+                            
+                           Please provide your response as a JSON dictionary where the keys are the file names 
+                           """ +
+                           
+                           
                            "and the values are the new contents of each modified file. " +
                            $"The files are {string.Join(',', files.Select(Path.GetFileName))}. " +
                            $"They are in the same order as the upload. " +
