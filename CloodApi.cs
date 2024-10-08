@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using CliWrap;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -60,7 +61,8 @@ public static class CloodApi
             // Check for uncommitted changes
             if (await Clood.HasUncommittedChanges(request.GitRoot))
             {
-                return Results.BadRequest("There are uncommitted changes in the repository. Please commit or stash them before proceeding.");
+                return Results.BadRequest(
+                    "There are uncommitted changes in the repository. Please commit or stash them before proceeding.");
             }
 
             session.OriginalBranch = await Git.GetCurrentBranch(request.GitRoot);
@@ -68,20 +70,23 @@ public static class CloodApi
         }
 
         var response = await Clood.SendRequestToClaudia(request.Prompt, request.SystemPrompt, request.Files);
-        
+
         if (string.IsNullOrWhiteSpace(response))
         {
             if (request.UseGit)
             {
                 await Git.DeleteBranch(request.GitRoot, session.NewBranch);
             }
+
             return Results.BadRequest("No valid response from Claude AI.");
         }
+
         var fileContents = ClaudiaHelper.Claudia2Json(response);
         if (fileContents == null)
         {
             return Results.BadRequest($"No valid response from Claude AI. {response} ");
         }
+
         session.ProposedChanges = fileContents;
 
         if (request.UseGit)
@@ -95,13 +100,15 @@ public static class CloodApi
             {
                 await Git.DeleteBranch(request.GitRoot, session.NewBranch);
             }
+
             return Results.StatusCode(500);
         }
 
-        return Results.Ok(new CloodResponse { Id = sessionId, NewBranch = session.NewBranch, ProposedChanges = session.ProposedChanges });
+        return Results.Ok(new CloodResponse
+            { Id = sessionId, NewBranch = session.NewBranch, ProposedChanges = session.ProposedChanges });
     }
 
-     private static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request)
+    private static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request)
     {
         if (!Sessions.TryRemove(request.Id, out var session))
         {
@@ -118,22 +125,33 @@ public static class CloodApi
         {
             if (request.Merge)
             {
-                var mergeSuccess = await Git.MergeChanges(session.GitRoot, session.OriginalBranch, session.NewBranch);
-                if (mergeSuccess)
-                {
-                    return Results.Ok("Changes merged successfully.");
-                }
-                else
+                // Commit changes using the new CommitSpecificFiles method
+                var commitSuccess = await Git.CommitSpecificFiles(
+                    session.GitRoot,
+                    session.Files,
+                    $"Changes made by Claudia AI on branch {session.NewBranch}"
+                );
+
+                if (!commitSuccess)
                 {
                     return Results.Ok("No changes to merge.");
                 }
-            }
-            else
-            {
+
+                // Switch back to the original branch
                 await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-                await Git.DeleteBranch(session.GitRoot, session.NewBranch);
-                return Results.Ok("Changes discarded.");
+
+                // Merge the new branch
+                await Cli.Wrap(Git.PathToGit)
+                    .WithWorkingDirectory(session.GitRoot)
+                    .WithArguments($"merge {session.NewBranch}")
+                    .ExecuteAsync();
+
+                return Results.Ok("Changes merged successfully.");
             }
+
+            await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
+            await Git.DeleteBranch(session.GitRoot, session.NewBranch);
+            return Results.Ok("Changes discarded.");
         }
         catch (Exception ex)
         {

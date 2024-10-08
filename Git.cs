@@ -62,6 +62,60 @@ public static class Git
         }
     }
 
+    public static async Task<bool> CommitSpecificFiles(string workingDirectory, List<string> files, string message)
+    {
+        try
+        {
+            // Add each file individually
+            foreach (var file in files)
+            {
+                var addResult = await Cli.Wrap(PathToGit)
+                    .WithWorkingDirectory(workingDirectory)
+                    .WithArguments($"add \"{file}\"")
+                    .ExecuteBufferedAsync();
+                
+                Console.WriteLine($"Git add output for {file}: {addResult.StandardOutput}");
+                Console.WriteLine($"Git add error for {file} (if any): {addResult.StandardError}");
+            }
+
+            // Check for changes after adding
+            var afterStatus = await GetGitStatus(workingDirectory);
+            Console.WriteLine($"Status after adding specific files: {afterStatus}");
+
+            if (string.IsNullOrWhiteSpace(afterStatus))
+            {
+                Console.WriteLine("No changes to commit after adding specific files.");
+                return false;
+            }
+
+            // Commit the changes
+            var commitResult = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments($"commit -m \"{message}\"")
+                .ExecuteBufferedAsync();
+
+            Console.WriteLine($"Git commit output: {commitResult.StandardOutput}");
+            Console.WriteLine($"Git commit error (if any): {commitResult.StandardError}");
+
+            Console.WriteLine("Specific files added and committed successfully.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during commit process for specific files: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static async Task<string> GetGitStatus(string workingDirectory)
+    {
+        var result = await Cli.Wrap(PathToGit)
+            .WithWorkingDirectory(workingDirectory)
+            .WithArguments("status --porcelain")
+            .ExecuteBufferedAsync();
+
+        return result.StandardOutput.Trim();
+    }
     public static async Task<bool> CommitChanges(string workingDirectory, string message)
     {
         try
