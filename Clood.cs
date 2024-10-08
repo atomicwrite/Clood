@@ -138,7 +138,8 @@ public static class Clood
 
             instruction += "\nPlease provide your response as a JSON dictionary where the keys are the file names " +
                            "and the values are the new contents of each modified file. " +
-                           $"The files are {string.Join(',', files.Select(Path.GetFileName))}. They are in the same order as the upload. " +
+                           $"The files are {string.Join(',', files.Select(Path.GetFileName))}. " +
+                           $"They are in the same order as the upload. " +
                            "Only include files in the JSON that you've modified.";
 
 
