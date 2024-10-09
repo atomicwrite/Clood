@@ -20,6 +20,11 @@ public static class ClaudiaHelper
             }
 
             var fileChanges = JsonConvert.DeserializeObject<FileChanges>(jsonContent);
+            if (fileChanges == null)
+                return fileChanges;
+            fileChanges.ChangedFiles ??= [];
+
+            fileChanges.NewFiles ??= [];
             return fileChanges;
         }
         catch (JsonException e)
@@ -128,7 +133,7 @@ public static class ClaudiaHelper
                     instruction = systemPrompt;
                 }
 
-                instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict,prompt,root_folder);
+                instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder);
 
                 var message = await anthropic.Messages.CreateAsync(new()
                 {
