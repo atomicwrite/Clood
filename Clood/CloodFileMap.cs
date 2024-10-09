@@ -26,16 +26,15 @@ namespace Clood
 
         private void LoadGitIgnore()
         {
-            string gitIgnorePath = Path.Combine(_folderPath, ".gitignore");
-            if (File.Exists(gitIgnorePath))
+            var gitIgnorePath = Path.Combine(_folderPath, ".gitignore");
+            if (!File.Exists(gitIgnorePath)) return;
+            foreach (var line in File.ReadLines(gitIgnorePath))
             {
-                foreach (string line in File.ReadLines(gitIgnorePath))
+                var trimmedLine = line.Trim();
+                if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#")) continue;
+                if (trimmedLine.EndsWith("/") || trimmedLine.EndsWith("/*"))
                 {
-                    string trimmedLine = line.Trim();
-                    if (!string.IsNullOrEmpty(trimmedLine) && !trimmedLine.StartsWith("#"))
-                    {
-                        _ignoredPaths.Add(trimmedLine);
-                    }
+                    _ignoredPaths.Add(trimmedLine);
                 }
             }
         }
@@ -51,9 +50,9 @@ namespace Clood
 
         private void PopulateFileMap(string currentPath, Dictionary<string, FilePathInfo> fileMap)
         {
-            foreach (string filePath in Directory.EnumerateFiles(currentPath))
+            foreach (var filePath in Directory.EnumerateFiles(currentPath))
             {
-                string relativePath = Path.GetRelativePath(_folderPath, filePath);
+                var relativePath = Path.GetRelativePath(_folderPath, filePath);
                 if (!IsIgnored(relativePath))
                 {
                     fileMap[relativePath] = new FilePathInfo
@@ -64,9 +63,9 @@ namespace Clood
                 }
             }
 
-            foreach (string dirPath in Directory.EnumerateDirectories(currentPath))
+            foreach (var dirPath in Directory.EnumerateDirectories(currentPath))
             {
-                string relativePath = Path.GetRelativePath(_folderPath, dirPath);
+                var relativePath = Path.GetRelativePath(_folderPath, dirPath);
                 if (!IsIgnored(relativePath))
                 {
                     PopulateFileMap(dirPath, fileMap);
