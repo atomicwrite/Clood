@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using CliWrap;
 using CliWrap.Buffered;
@@ -10,9 +11,38 @@ namespace CloodKey.KeyTools
     {
         private readonly string _cmdUtilPath;
 
-        public CmdUtilKeyTool(string cmdUtilPath)
+        public CmdUtilKeyTool(string? cmdUtilPath = null)
         {
-            _cmdUtilPath = cmdUtilPath ?? throw new ArgumentNullException(nameof(cmdUtilPath));
+            _cmdUtilPath = GetCmdUtilPath(cmdUtilPath);
+        }
+
+        private string GetCmdUtilPath(string? providedPath)
+        {
+            if (!string.IsNullOrEmpty(providedPath))
+            {
+                if (File.Exists(providedPath))
+                {
+                    return providedPath;
+                }
+                throw new FileNotFoundException($"The provided cmdutil path does not exist: {providedPath}");
+            }
+
+            string? pathFromEnvironment = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrEmpty(pathFromEnvironment))
+            {
+                throw new InvalidOperationException("The PATH environment variable is not set.");
+            }
+
+            foreach (string path in pathFromEnvironment.Split(Path.PathSeparator))
+            {
+                string fullPath = Path.Combine(path, "cmdutil.exe");
+                if (File.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+            }
+
+            throw new FileNotFoundException("cmdutil.exe could not be found in the system PATH.");
         }
 
         public override string Get(string key)
