@@ -25,8 +25,10 @@ public static class RevertCloodApi
 
         try
         {
+       
             await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
             await Git.DeleteBranch(session.GitRoot, session.NewBranch);
+            await Git.RecheckoutBranchRevert(session.GitRoot);
             response.Success = true;
             response.Data = "Changes reverted successfully. Returned to original state.";
         }

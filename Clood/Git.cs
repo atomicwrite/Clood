@@ -195,6 +195,11 @@ public static class Git
         Console.WriteLine($"Switched to branch: {branchName}");
     }
 
+    public static async Task RecheckoutBranchRevert(string workingDirectory)
+    {
+        await Cli.Wrap(PathToGit).WithWorkingDirectory(workingDirectory).WithArguments("checkout .").ExecuteBufferedAsync();
+        Console.WriteLine($"Re checkedout from {workingDirectory}"); 
+    }
     public static async Task DeleteBranch(string workingDirectory, string branchName)
     {
         await Cli.Wrap(PathToGit)

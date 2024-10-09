@@ -30,6 +30,7 @@ public static class MergeCloodApi
             {
                 await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
                 await Git.DeleteBranch(session.GitRoot, session.NewBranch);
+                await Git.RecheckoutBranchRevert(session.GitRoot);
                 response.Success = true;
                 response.Data = "Changes discarded.";
                 return Results.Ok(response);
