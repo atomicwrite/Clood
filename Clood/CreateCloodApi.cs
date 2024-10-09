@@ -8,6 +8,13 @@ public static class CreateCloodApi
     public static async Task<IResult> CreateCloodChanges([FromBody] CloodRequest request)
     {
         var response = new CloodResponse<CloodStartResponse>();
+        var missing = request.Files.Where(a => !File.Exists(a)).ToArray();
+        if (missing.Length != 0)
+        {
+            response.Success = false;
+            response.ErrorMessage = $"Files are missing in this folder {string.Join(",", missing)}";
+            return Results.Ok(response);
+        }
 
         var sessionId = Guid.NewGuid().ToString();
         var session = new CloodSession
@@ -22,18 +29,19 @@ public static class CreateCloodApi
             var uncommittedChanges = await Clood.GetUncommittedChanges(CloodApi.GitRoot);
             if (uncommittedChanges.Count != 0)
             {
-                
                 response.Success = false;
-                response.ErrorMessage = $"Uncommitted changes found in the repository. {string.Join("\n,",uncommittedChanges)}";
+                response.ErrorMessage =
+                    $"Uncommitted changes found in the repository. {string.Join("\n,", uncommittedChanges)}";
                 return Results.Ok(response);
-             
             }
 
             session.OriginalBranch = await Git.GetCurrentBranch(CloodApi.GitRoot);
             session.NewBranch = await Git.CreateNewBranch(CloodApi.GitRoot, request.Files);
         }
 
-        var claudeResponse = await ClaudiaHelper.SendRequestToClaudia(request.Prompt, CloodApi.GitRoot,request.SystemPrompt, request.Files);
+        var claudeResponse =
+            await ClaudiaHelper.SendRequestToClaudia(request.Prompt, CloodApi.GitRoot, request.SystemPrompt,
+                request.Files);
 
         if (string.IsNullOrWhiteSpace(claudeResponse))
         {
@@ -41,6 +49,7 @@ public static class CreateCloodApi
             {
                 await Git.DeleteBranch(CloodApi.GitRoot, session.NewBranch);
             }
+
             response.Success = false;
             response.ErrorMessage = "Invalid response from Claude AI.";
             return Results.Ok(response);
@@ -53,12 +62,14 @@ public static class CreateCloodApi
             response.ErrorMessage = "Invalid JSON response from Claude AI.";
             return Results.Ok(response);
         }
+
         if (!fileChanges.Answered)
         {
             response.Success = false;
             response.ErrorMessage = "Claude could not answer the question.";
             return Results.Ok(response);
         }
+
         session.ProposedChanges = fileChanges;
 
         if (request.UseGit)
@@ -72,6 +83,7 @@ public static class CreateCloodApi
             {
                 await Git.DeleteBranch(CloodApi.GitRoot, session.NewBranch);
             }
+
             response.Success = false;
             response.ErrorMessage = "Failed to add session.";
             return Results.Ok(response);
