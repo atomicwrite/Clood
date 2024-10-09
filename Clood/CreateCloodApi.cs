@@ -77,7 +77,7 @@ public static class CreateCloodApi
         {
             Id = sessionId,
             NewBranch = session.NewBranch,
-            ProposedChanges = session.ProposedChanges
+            ProposedChanges = session.ProposedChanges,
         };
 
         return Results.Ok(response);
