@@ -13,7 +13,9 @@ namespace CloodTest
         [SetUp]
         public void Setup()
         {
-            _cmdKeyCli = new CmdKeyCli("");
+            // Use the currently logged-in username
+            string currentUsername = Environment.UserName;
+            _cmdKeyCli = new CmdKeyCli(currentUsername);
         }
 
         [Test]
