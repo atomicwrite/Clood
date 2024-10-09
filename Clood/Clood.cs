@@ -281,7 +281,7 @@ public static class Clood
         return fullPath;
     }
 
-    private static string NormalizePath(string path)
+    private static string NormalizePath(string path) 
     {
         return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
