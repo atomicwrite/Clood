@@ -74,4 +74,10 @@ public class Doodle
     {
         Console.WriteLine($"Current time: {DateTime.Now.ToString("HH:mm:ss")}");
     }
+
+    public void PrintYesterdayDate()
+    {
+        DateTime yesterday = DateTime.Now.AddDays(-1);
+        Console.WriteLine($"Yesterday's date: {yesterday.ToString("yyyy-MM-dd")}");
+    }
 }
