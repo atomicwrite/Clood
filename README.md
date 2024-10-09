@@ -1,3 +1,14 @@
+# Change Log
+
+[Change log content remains the same]
+
+# Commit Message
+
+[Commit message content remains the same]
+
+# Updated README
+
+ 
 # Clood: Claude AI-Powered Code Modification Tool
 
 ## Introduction
@@ -17,6 +28,10 @@ Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI
 - Supports custom system prompts for tailored AI behavior
 - Allows specifying Git path and root directory
 - Offers a version command to check the current Clood version
+- Implements a robust API for server mode operations
+- Supports creating, updating, and deleting files within the Git repository
+- Implements retry logic for handling API overload errors
+- Provides detailed error messages and logging
 
 ## Prerequisites
 
@@ -27,20 +42,18 @@ Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI
 ## Setup
 
 1. Clone the repository:
-   ```
-   git clone https://github.com/atomicwrite/clood.git
-   cd clood
-   ```
+ 
 
 2. Install the required NuGet packages:
    ```
-   dotnet restore
+dotnet restore
    ```
 
 3. Set up your Anthropic API key as a user secret:
    ```
-   dotnet user-secrets set "clood-key" "your-api-key-here"
+dotnet user-secrets set "clood-key" "your-api-key-here"
    ```
+3a. You can optionall
 
 ## Usage
 
@@ -50,12 +63,12 @@ Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI
 
 2. Run Clood with the desired options:
    ```
-   dotnet run -- [options] <files>
+dotnet run -- [options] <files>
    ```
 
    Options:
    - `-m, --server`: Start Clood in server mode
-   - `-u, --server-urls`: Specify URLs for the server to listen on
+   - `-u, --server-urls`: Specify URLs for the server to listen on (e.g., "http://localhost:5000")
    - `-v, --version`: Print the Clood version and exit
    - `-g, --git-path`: Specify the path to the Git executable
    - `-r, --git-root`: Specify the Git root directory (required)
@@ -64,7 +77,7 @@ Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI
 
    Example:
    ```
-   dotnet run -- -r /path/to/git/repo -p "Refactor this code for better performance" file1.cs file2.cs
+dotnet run -- -r /path/to/git/repo -p "Refactor this code for better performance" file1.cs file2.cs
    ```
 
 3. Follow the prompts to review and apply changes.
@@ -73,13 +86,52 @@ Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI
 
 1. Start Clood in server mode:
    ```
-   dotnet run -- -m -u http://localhost:5000
+dotnet run -- -m -u http://localhost:5000 dummyfile
    ```
 
 2. Use the following API endpoints:
-   - `POST /api/clood/start`: Start a Clood session
-   - `POST /api/clood/merge`: Merge or discard changes from a session
-   - `POST /api/clood/revert`: Revert changes from a session
+
+   - `POST /api/clood/start`
+     - Request body: `CloodRequest` object
+     - Response: `CloodResponse<CloodStartResponse>` object
+
+   - `POST /api/clood/merge`
+     - Request body: `MergeRequest` object
+     - Response: `CloodResponse<string>` object
+
+   - `POST /api/clood/revert`
+     - Request body: Session ID (string)
+     - Response: `CloodResponse<string>` object
+
+   Example of a `CloodRequest` object:
+   ```json
+   {
+     "prompt": "Refactor this code for better performance",
+     "systemPrompt": "Act as an experienced software engineer",
+     "files": ["file1.cs", "file2.cs"],
+     "gitRoot": "/path/to/git/repo",
+     "useGit": true
+   }
+   ```
+
+Example of a `CloodResponse` object:
+   ```json
+   {
+     "success": true,
+     "errorMessage": null,
+     "data": {
+       "id": "session-guid",
+       "newBranch": "Modifications-file1-file2",
+       "proposedChanges": {
+         "changedFiles": [
+           {"filename": "file1.cs", "content": "..."},
+           {"filename": "file2.cs", "content": "..."}
+         ],
+         "newFiles": []
+       }
+     }
+   }
+   ```
 
 ## How It Works
 
@@ -90,6 +142,12 @@ Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI
 5. You can review the changes and decide whether to keep or discard them.
 6. If you choose to keep the changes, they can be merged back into your original branch.
 
+## Error Handling
+
+- Clood implements retry logic for handling API overload errors.
+- Detailed error messages are provided for various scenarios, including Git operations, file access, and API communication.
+- In server mode, error responses include a `success` flag and an `errorMessage` field for easy error handling by clients.
+
 ## Contributing
 
 Contributions to improve Clood are welcome! Please feel free to submit pull requests or open issues to suggest improvements or report bugs.
@@ -97,6 +155,7 @@ Contributions to improve Clood are welcome! Please feel free to submit pull requ
 ## License
 
 GPL
+
 
 ## Disclaimer
 
