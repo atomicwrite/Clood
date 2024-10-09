@@ -12,6 +12,11 @@ public class Doodle
         return a - b;
     }
 
+    public double Subtract(double a, double b)
+    {
+        return a - b;
+    }
+
     public int Multiply(int a, int b)
     {
         return a * b;
