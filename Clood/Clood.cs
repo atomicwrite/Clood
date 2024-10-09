@@ -83,7 +83,7 @@ public static class Clood
             var fileContents = ClaudiaHelper.Claudia2Json(response) ??
                                throw new JsonException($"Response from claude was invalid json {response}");
 
-    
+
             await ApplyChanges(fileChanges, opts.GitRoot);
             GitHelpers.AskToOpenFiles(files);
             await GitHelpers.AskToKeepChanges(opts.GitRoot, currentBranch, newBranchName);
@@ -118,7 +118,7 @@ public static class Clood
             .Build();
 
         var apiKey = config["clood-key"];
-        
+
         if (string.IsNullOrEmpty(apiKey))
         {
             throw new Exception("Missing clood-key in user secrets or environment variables.");
@@ -168,7 +168,7 @@ public static class Clood
                                 4. Read all the files, some may not need to be changed and are just there for context:
                                   a. Generate the modified content based on the prompt
                                   b. If new files need to be created, include them in the output
-                                
+
                                 5. After processing all files, format your response as a JSON object with two arrays:
                                    - "changedFiles": An array of objects, each containing "filename" and "content" for modified existing files
                                    - "newFiles": An array of objects, each containing "filename" and "content" for newly created files
@@ -217,10 +217,12 @@ public static class Clood
 
     public static async Task ApplyChanges(FileChanges fileChanges, string gitRoot)
     {
+        gitRoot = NormalizePath(gitRoot);
+
         // Handle changed files
         foreach (var file in fileChanges.ChangedFiles)
         {
-            string fullPath = GetFullPath(file.Filename, gitRoot);
+            string fullPath = GetFullPath(NormalizePath(file.Filename), gitRoot);
             if (fullPath == null)
             {
                 Console.WriteLine($"Warning: Skipping changed file outside git root: {file.Filename}");
@@ -254,28 +256,34 @@ public static class Clood
 
     private static string GetFullPath(string filename, string gitRoot)
     {
-        string fullPath;
-        if (Path.IsPathRooted(filename))
+        string fullPath = NormalizePath(filename);
+
+        if (Path.IsPathRooted(fullPath))
         {
             // If the path is absolute, ensure it starts with the git root
-            if (!filename.StartsWith(gitRoot, StringComparison.OrdinalIgnoreCase))
+            if (!fullPath.StartsWith(gitRoot, StringComparison.OrdinalIgnoreCase))
             {
                 return null; // File is outside git root
             }
-            fullPath = filename;
         }
         else
         {
             // If the path is relative, combine it with the git root
-            fullPath = Path.GetFullPath(Path.Combine(gitRoot, filename));
-        
+            fullPath = NormalizePath(Path.Combine(gitRoot, filename));
+
             // Ensure the resulting path is still within the git root
             if (!fullPath.StartsWith(gitRoot, StringComparison.OrdinalIgnoreCase))
             {
                 return null; // File is outside git root
             }
         }
+
         return fullPath;
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 
     public static async Task<bool> HasUncommittedChanges(string gitRoot)
