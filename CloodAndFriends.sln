@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clood", "Clood\Clood.csproj", "{5B17C10F-D8FB-4103-80DA-A04F38EB861F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloodTest", "CloodTest\CloodTest.csproj", "{08CEDF88-B5F7-4A05-B274-6DECB474FDAB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EBECBD9F-21B8-49C6-9649-4F381575064D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EBECBD9F-21B8-49C6-9649-4F381575064D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EBECBD9F-21B8-49C6-9649-4F381575064D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EBECBD9F-21B8-49C6-9649-4F381575064D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B17C10F-D8FB-4103-80DA-A04F38EB861F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B17C10F-D8FB-4103-80DA-A04F38EB861F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B17C10F-D8FB-4103-80DA-A04F38EB861F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B17C10F-D8FB-4103-80DA-A04F38EB861F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08CEDF88-B5F7-4A05-B274-6DECB474FDAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08CEDF88-B5F7-4A05-B274-6DECB474FDAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08CEDF88-B5F7-4A05-B274-6DECB474FDAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08CEDF88-B5F7-4A05-B274-6DECB474FDAB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
