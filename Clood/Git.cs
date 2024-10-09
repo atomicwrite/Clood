@@ -1,4 +1,4 @@
-﻿using CliWrap;
+using CliWrap;
 using CliWrap.Buffered;
 
 namespace Clood;
@@ -197,9 +197,27 @@ public static class Git
 
     public static async Task RecheckoutBranchRevert(string workingDirectory)
     {
-        await Cli.Wrap(PathToGit).WithWorkingDirectory(workingDirectory).WithArguments("checkout .").ExecuteBufferedAsync();
-        Console.WriteLine($"Re checkedout from {workingDirectory}"); 
+        try
+        {
+            await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("checkout .")
+                .ExecuteBufferedAsync();
+            Console.WriteLine($"Re-checked out from {workingDirectory}");
+
+            // Run git clean -fd
+            var cleanResult = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("clean -fd")
+                .ExecuteBufferedAsync();
+            Console.WriteLine($"Cleaned untracked files and directories: {cleanResult.StandardOutput}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during RecheckoutBranchRevert: {ex.Message}");
+        }
     }
+
     public static async Task DeleteBranch(string workingDirectory, string branchName)
     {
         await Cli.Wrap(PathToGit)
