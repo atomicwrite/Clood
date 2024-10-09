@@ -14,8 +14,9 @@ namespace CloodKey
         {
             try
             {
+                var arguments = new[] { "/list:" + key };
                 var result = Cli.Wrap(CmdKeyPath)
-                    .WithArguments(new[] { "/list:" + key })
+                    .WithArguments(arguments)
                     .ExecuteBufferedAsync()
                     .GetAwaiter()
                     .GetResult();
@@ -31,11 +32,14 @@ namespace CloodKey
                     }
                 }
 
+                Console.WriteLine($"Command sent: {CmdKeyPath} {string.Join(" ", arguments)}");
+                Console.WriteLine($"Program output:\n{result.StandardOutput}");
                 throw new KeyNotFoundException($"Key '{key}' not found.");
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error retrieving key '{key}': {ex.Message}", ex);
+                Console.WriteLine($"Error retrieving key '{key}': {ex.Message}");
+                throw;
             }
         }
 
@@ -43,8 +47,9 @@ namespace CloodKey
         {
             try
             {
+                var arguments = new[] { $"/add:{key}", $"/pass:{value}" };
                 var result = Cli.Wrap(CmdKeyPath)
-                    .WithArguments(new[] { $"/add:{key}", $"/pass:{value}" })
+                    .WithArguments(arguments)
                     .ExecuteBufferedAsync()
                     .GetAwaiter()
                     .GetResult();
@@ -55,12 +60,16 @@ namespace CloodKey
                 }
                 else
                 {
-                    throw new Exception($"Failed to set key. Exit code: {result.ExitCode}. Error: {result.StandardError}");
+                    Console.WriteLine($"Command sent: {CmdKeyPath} {string.Join(" ", arguments)}");
+                    Console.WriteLine($"Program output:\n{result.StandardOutput}");
+                    Console.WriteLine($"Error output:\n{result.StandardError}");
+                    throw new Exception($"Failed to set key. Exit code: {result.ExitCode}");
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error setting key '{key}': {ex.Message}", ex);
+                Console.WriteLine($"Error setting key '{key}': {ex.Message}");
+                throw;
             }
         }
     }
