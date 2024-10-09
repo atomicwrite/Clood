@@ -236,7 +236,7 @@ public static class Clood
         // Handle new files
         foreach (var file in fileChanges.NewFiles)
         {
-            string fullPath = GetFullPath(file.Filename, gitRoot);
+            string fullPath = GetFullPath(NormalizePath(file.Filename), gitRoot);
             if (fullPath == null)
             {
                 Console.WriteLine($"Warning: Skipping new file outside git root: {file.Filename}");

@@ -19,35 +19,42 @@ public static class CloodApi
 
     private static async Task<IResult> RevertCloodChanges([FromBody] string sessionId)
     {
+        var response = new CloodResponse<string>();
+
         if (!Sessions.TryRemove(sessionId, out var session))
         {
-            return Results.NotFound("Session not found.");
+            response.Success = false;
+            response.ErrorMessage = "Session not found.";
+            return Results.Ok(response);
         }
 
         if (!session.UseGit)
         {
-            // For non-Git sessions, we don't need to do anything as changes weren't actually applied
-            return Results.Ok("Session removed. No changes were applied to revert.");
+            response.Success = true;
+            response.Data = "Session removed. No changes were applied to revert.";
+            return Results.Ok(response);
         }
 
         try
         {
-            // Switch back to the original branch
             await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-
-            // Delete the temporary branch created for Claude's changes
             await Git.DeleteBranch(session.GitRoot, session.NewBranch);
-
-            return Results.Ok("Changes reverted successfully. Returned to original state.");
+            response.Success = true;
+            response.Data = "Changes reverted successfully. Returned to original state.";
         }
         catch (Exception ex)
         {
-            return Results.BadRequest($"Error during revert process: {ex.Message}");
+            response.Success = false;
+            response.ErrorMessage = $"Failed to revert changes: {ex.Message}";
         }
+
+        return Results.Ok(response);
     }
 
     private static async Task<IResult> StartCloodProcess([FromBody] CloodRequest request)
     {
+        var response = new CloodResponse<CloodStartResponse>();
+
         string sessionId = Guid.NewGuid().ToString();
         CloodSession session = new CloodSession
         {
@@ -58,33 +65,36 @@ public static class CloodApi
 
         if (request.UseGit)
         {
-            // Check for uncommitted changes
             if (await Clood.HasUncommittedChanges(request.GitRoot))
             {
-                return Results.BadRequest(
-                    "There are uncommitted changes in the repository. Please commit or stash them before proceeding.");
+                response.Success = false;
+                response.ErrorMessage = "Uncommitted changes found in the repository.";
+                return Results.Ok(response);
             }
 
             session.OriginalBranch = await Git.GetCurrentBranch(request.GitRoot);
             session.NewBranch = await Git.CreateNewBranch(request.GitRoot, request.Files);
         }
 
-        var response = await Clood.SendRequestToClaudia(request.Prompt, request.SystemPrompt, request.Files);
+        var claudeResponse = await Clood.SendRequestToClaudia(request.Prompt, request.SystemPrompt, request.Files);
 
-        if (string.IsNullOrWhiteSpace(response))
+        if (string.IsNullOrWhiteSpace(claudeResponse))
         {
             if (request.UseGit)
             {
                 await Git.DeleteBranch(request.GitRoot, session.NewBranch);
             }
-
-            return Results.BadRequest("No valid response from Claude AI.");
+            response.Success = false;
+            response.ErrorMessage = "Invalid response from Claude AI.";
+            return Results.Ok(response);
         }
 
-        var fileChanges = ClaudiaHelper.Claudia2Json(response);
+        var fileChanges = ClaudiaHelper.Claudia2Json(claudeResponse);
         if (fileChanges == null)
         {
-            return Results.BadRequest($"No valid response from Claude AI. {response} ");
+            response.Success = false;
+            response.ErrorMessage = "Invalid JSON response from Claude AI.";
+            return Results.Ok(response);
         }
 
         session.ProposedChanges = fileChanges;
@@ -100,36 +110,44 @@ public static class CloodApi
             {
                 await Git.DeleteBranch(request.GitRoot, session.NewBranch);
             }
-
-            return Results.StatusCode(500);
+            response.Success = false;
+            response.ErrorMessage = "Failed to add session.";
+            return Results.Ok(response);
         }
 
-        return Results.Ok(new CloodResponse
+        response.Success = true;
+        response.Data = new CloodStartResponse
         {
             Id = sessionId,
             NewBranch = session.NewBranch,
             ProposedChanges = session.ProposedChanges
-        });
+        };
+
+        return Results.Ok(response);
     }
 
     private static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request)
     {
+        var response = new CloodResponse<string>();
+
         if (!Sessions.TryRemove(request.Id, out var session))
         {
-            return Results.NotFound("Session not found.");
+            response.Success = false;
+            response.ErrorMessage = "Session not found.";
+            return Results.Ok(response);
         }
 
         if (!session.UseGit)
         {
-            // For non-Git sessions, we just return the proposed changes
-            return Results.Ok(new { Message = "Session closed.", ProposedChanges = session.ProposedChanges });
+            response.Success = true;
+            response.Data = "Session closed. No changes were applied.";
+            return Results.Ok(response);
         }
 
         try
         {
             if (request.Merge)
             {
-                // Commit changes using the new CommitSpecificFiles method
                 var commitSuccess = await Git.CommitSpecificFiles(
                     session.GitRoot,
                     session.ProposedChanges.ChangedFiles.Select(f => f.Filename).Concat(session.ProposedChanges.NewFiles.Select(f => f.Filename)).ToList(),
@@ -138,28 +156,48 @@ public static class CloodApi
 
                 if (!commitSuccess)
                 {
-                    return Results.Ok("No changes to merge.");
+                    response.Success = true;
+                    response.Data = "No changes to merge.";
+                    return Results.Ok(response);
                 }
 
-                // Switch back to the original branch
                 await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-
-                // Merge the new branch
                 await Cli.Wrap(Git.PathToGit)
                     .WithWorkingDirectory(session.GitRoot)
                     .WithArguments($"merge {session.NewBranch}")
                     .ExecuteAsync();
 
-                return Results.Ok("Changes merged successfully.");
+                response.Success = true;
+                response.Data = "Changes merged successfully.";
             }
-
-            await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-            await Git.DeleteBranch(session.GitRoot, session.NewBranch);
-            return Results.Ok("Changes discarded.");
+            else
+            {
+                await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
+                await Git.DeleteBranch(session.GitRoot, session.NewBranch);
+                response.Success = true;
+                response.Data = "Changes discarded.";
+            }
         }
         catch (Exception ex)
         {
-            return Results.BadRequest($"Error during merge/discard process: {ex.Message}");
+            response.Success = false;
+            response.ErrorMessage = $"Failed to process merge request: {ex.Message}";
         }
+
+        return Results.Ok(response);
     }
+}
+
+public class CloodResponse<T>
+{
+    public bool Success { get; set; }
+    public string ErrorMessage { get; set; }
+    public T Data { get; set; }
+}
+
+public class CloodStartResponse
+{
+    public string Id { get; set; }
+    public string NewBranch { get; set; }
+    public FileChanges ProposedChanges { get; set; }
 }
