@@ -13,7 +13,7 @@ namespace CloodTest
         [SetUp]
         public void Setup()
         {
-            _cmdKeyCli = new CmdKeyCli();
+            _cmdKeyCli = new CmdKeyCli("");
         }
 
         [Test]

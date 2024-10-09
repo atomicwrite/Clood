@@ -9,12 +9,18 @@ namespace CloodKey
     public class CmdKeyCli : KeyCli
     {
         private const string CmdKeyPath = "cmdkey.exe";
+        private readonly string _username;
+
+        public CmdKeyCli(string username)
+        {
+            _username = username ?? throw new ArgumentNullException(nameof(username));
+        }
 
         public override string Get(string key)
         {
             try
             {
-                var arguments = new[] { "/list:" + key };
+                var arguments = new[] { "/list:" + key, "/U:" + _username };
                 var result = Cli.Wrap(CmdKeyPath)
                     .WithArguments(arguments)
                     .ExecuteBufferedAsync()
@@ -34,11 +40,11 @@ namespace CloodKey
 
                 Console.WriteLine($"Command sent: {CmdKeyPath} {string.Join(" ", arguments)}");
                 Console.WriteLine($"Program output:\n{result.StandardOutput}");
-                throw new KeyNotFoundException($"Key '{key}' not found.");
+                throw new KeyNotFoundException($"Key '{key}' not found for user '{_username}'.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error retrieving key '{key}': {ex.Message}");
+                Console.WriteLine($"Error retrieving key '{key}' for user '{_username}': {ex.Message}");
                 throw;
             }
         }
@@ -47,7 +53,7 @@ namespace CloodKey
         {
             try
             {
-                var arguments = new[] { $"/add:{key}", $"/pass:{value}" };
+                var arguments = new[] { $"/add:{key}", $"/pass:{value}", $"/U:{_username}" };
                 var result = Cli.Wrap(CmdKeyPath)
                     .WithArguments(arguments)
                     .ExecuteBufferedAsync()
@@ -63,12 +69,12 @@ namespace CloodKey
                     Console.WriteLine($"Command sent: {CmdKeyPath} {string.Join(" ", arguments)}");
                     Console.WriteLine($"Program output:\n{result.StandardOutput}");
                     Console.WriteLine($"Error output:\n{result.StandardError}");
-                    throw new Exception($"Failed to set key. Exit code: {result.ExitCode}");
+                    throw new Exception($"Failed to set key for user '{_username}'. Exit code: {result.ExitCode}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error setting key '{key}': {ex.Message}");
+                Console.WriteLine($"Error setting key '{key}' for user '{_username}': {ex.Message}");
                 throw;
             }
         }
