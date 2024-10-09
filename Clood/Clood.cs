@@ -217,19 +217,65 @@ public static class Clood
 
     public static async Task ApplyChanges(FileChanges fileChanges, string gitRoot)
     {
+        // Handle changed files
         foreach (var file in fileChanges.ChangedFiles)
         {
-            var fullPath = Path.Combine(gitRoot, file.Filename);
+            string fullPath = GetFullPath(file.Filename, gitRoot);
+            if (fullPath == null)
+            {
+                Console.WriteLine($"Warning: Skipping changed file outside git root: {file.Filename}");
+                continue;
+            }
+
             await File.WriteAllTextAsync(fullPath, file.Content);
             Console.WriteLine($"Updated file: {file.Filename}");
         }
 
+        // Handle new files
         foreach (var file in fileChanges.NewFiles)
         {
-            var fullPath = Path.Combine(gitRoot, file.Filename);
+            string fullPath = GetFullPath(file.Filename, gitRoot);
+            if (fullPath == null)
+            {
+                Console.WriteLine($"Warning: Skipping new file outside git root: {file.Filename}");
+                continue;
+            }
+
+            if (File.Exists(fullPath))
+            {
+                throw new IOException($"Error: New file already exists: {file.Filename}");
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
             await File.WriteAllTextAsync(fullPath, file.Content);
             Console.WriteLine($"Created new file: {file.Filename}");
         }
+    }
+
+    private static string GetFullPath(string filename, string gitRoot)
+    {
+        string fullPath;
+        if (Path.IsPathRooted(filename))
+        {
+            // If the path is absolute, ensure it starts with the git root
+            if (!filename.StartsWith(gitRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                return null; // File is outside git root
+            }
+            fullPath = filename;
+        }
+        else
+        {
+            // If the path is relative, combine it with the git root
+            fullPath = Path.GetFullPath(Path.Combine(gitRoot, filename));
+        
+            // Ensure the resulting path is still within the git root
+            if (!fullPath.StartsWith(gitRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                return null; // File is outside git root
+            }
+        }
+        return fullPath;
     }
 
     public static async Task<bool> HasUncommittedChanges(string gitRoot)
