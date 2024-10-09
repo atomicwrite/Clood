@@ -61,5 +61,10 @@ public class Doodle
         return a * b * c * 3 * 3 * 3;
     }
 
- 
+    public int Fibonacci(int n)
+    {
+        if (n <= 1)
+            return n;
+        return Fibonacci(n - 1) + Fibonacci(n - 2);
+    }
 }

@@ -65,11 +65,14 @@ public static class CloodApi
 
         if (request.UseGit)
         {
-            if (await Clood.HasUncommittedChanges(request.GitRoot))
+            var uncommittedChanges = await Clood.GetUncommittedChanges(request.GitRoot);
+            if (uncommittedChanges.Count != 0)
             {
+                
                 response.Success = false;
-                response.ErrorMessage = "Uncommitted changes found in the repository.";
+                response.ErrorMessage = $"Uncommitted changes found in the repository. {string.Join("\n,",uncommittedChanges)}";
                 return Results.Ok(response);
+             
             }
 
             session.OriginalBranch = await Git.GetCurrentBranch(request.GitRoot);

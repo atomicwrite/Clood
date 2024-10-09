@@ -285,7 +285,26 @@ public static class Clood
     {
         return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
+    public static async Task<List<string>> GetUncommittedChanges(string gitRoot)
+    {
+        try
+        {
+            var result = await Cli.Wrap("git")
+                .WithArguments("status --porcelain")
+                .WithWorkingDirectory(gitRoot)
+                .ExecuteBufferedAsync();
 
+            return result.StandardOutput
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Substring(3).Trim())
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting uncommitted changes: {ex.Message}");
+            return new List<string>();
+        }
+    }
     public static async Task<bool> HasUncommittedChanges(string gitRoot)
     {
         try
