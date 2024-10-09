@@ -134,7 +134,7 @@ public static class ClaudiaHelper
                 {
                     Model = Models.Claude3_5Sonnet,
                     MaxTokens = 4000,
-                    Messages = [new() { Role = Roles.User, Content = [..sources, instruction, prompt] }]
+                    Messages = [new() { Role = Roles.User, Content = [..sources, instruction, prompt] }],
                 });
 
                 return message.Content[0].Text;

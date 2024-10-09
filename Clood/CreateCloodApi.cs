@@ -53,7 +53,12 @@ public static class CreateCloodApi
             response.ErrorMessage = "Invalid JSON response from Claude AI.";
             return Results.Ok(response);
         }
-
+        if (!fileChanges.Answered)
+        {
+            response.Success = false;
+            response.ErrorMessage = "Claude could not answer the question.";
+            return Results.Ok(response);
+        }
         session.ProposedChanges = fileChanges;
 
         if (request.UseGit)
