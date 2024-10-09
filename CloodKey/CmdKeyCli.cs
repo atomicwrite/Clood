@@ -25,7 +25,7 @@ namespace CloodKey
         {
             try
             {
-                var arguments = new[] { "/list:" + key, "/U:" + _username };
+                var arguments = new[] { "/list:" + key };
                 var result = Cli.Wrap(CmdKeyPath)
                     .WithArguments(arguments)
                     .ExecuteBufferedAsync()
