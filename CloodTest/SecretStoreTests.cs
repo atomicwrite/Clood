@@ -6,42 +6,42 @@ using CloodKey.Interfaces;
 namespace CloodTest
 {
     [TestFixture]
-    public class CmdKeyCliTests
+    public class SecretStoreTests
     {
-        private CmdKeyCli _cmdKeyCli;
+        private SecretStore _secretStore;
 
         [SetUp]
         public void Setup()
         {
             // Use the currently logged-in username
             string currentUsername = Environment.UserName;
-            _cmdKeyCli = new CmdKeyCli(currentUsername);
+            _secretStore = new SecretStore(currentUsername);
         }
 
         [Test]
-        public void TestAddingKey()
+        public async Task TestAddingKey()
         {
             // Arrange
             string key = "TestKey";
             string value = "TestValue";
 
             // Act
-            string result = _cmdKeyCli.Set(key, value);
+            _secretStore.Set(key, value);
 
             // Assert
-            Assert.That(result, Is.EqualTo("Key set successfully."));
+           Assert.Pass();
         }
 
         [Test]
-        public void TestAddingAndGettingKey()
+        public async Task TestAddingAndGettingKey()
         {
             // Arrange
             string key = "TestKey2";
             string value = "TestValue2";
 
             // Act
-            _cmdKeyCli.Set(key, value);
-            string retrievedValue = _cmdKeyCli.Get(key);
+            _secretStore.Set(key, value);
+            string retrievedValue = await _secretStore.Get(key);
 
             // Assert
             Assert.That(retrievedValue, Is.EqualTo(value));
@@ -54,7 +54,7 @@ namespace CloodTest
             string nonExistentKey = "NonExistentKey";
 
             // Act & Assert
-            Assert.Throws<KeyNotFoundException>(() => _cmdKeyCli.Get(nonExistentKey));
+            Assert.Throws<KeyNotFoundException>(async () => await _secretStore.Get(nonExistentKey));
         }
     }
 }

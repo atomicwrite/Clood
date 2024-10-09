@@ -6,15 +6,37 @@ using CloodKey.Interfaces;
 
 namespace CloodKey
 {
-    public class CmdKeyCli : KeyCli
+    public class SecretStore : KeyCli
     {
         private const string PowerShellPath = "powershell.exe";
         private readonly string _vault;
 
-        public CmdKeyCli(string vault)
+        public SecretStore(string vault,bool autoLockAfterRead = false)
         {
             _vault = vault;
             EnsureVaultExists().GetAwaiter().GetResult();
+        }
+
+        public override async Task Delete(string key)
+        {
+            try
+            {
+                var result = await Cli.Wrap(PowerShellPath)
+                    .WithArguments(new[] { "-Command", $"Set-Secret -Vault {_vault} -Name {key} -Secret ''" })
+                    .ExecuteBufferedAsync();
+
+                if (result.ExitCode == 0)
+                {
+                    return  ;
+                }
+
+                throw new KeyNotFoundException($"Key '{key}' not found in vault '{_vault}'. Error: {result.StandardError}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving key '{key}' from vault '{_vault}': {ex.Message}");
+                throw;
+            }
         }
 
         private async Task EnsureVaultExists()
