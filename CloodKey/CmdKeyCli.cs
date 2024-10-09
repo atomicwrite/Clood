@@ -11,9 +11,14 @@ namespace CloodKey
         private const string CmdKeyPath = "cmdkey.exe";
         private readonly string _username;
 
-        public CmdKeyCli(string username)
+        public CmdKeyCli()
         {
-            _username = username ?? throw new ArgumentNullException(nameof(username));
+            _username = Environment.UserName;
+        }
+
+        public CmdKeyCli(string? username)
+        {
+            _username = username ?? Environment.UserName;
         }
 
         public override string Get(string key)
