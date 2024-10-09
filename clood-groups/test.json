@@ -1,1 +1,6 @@
-{"files":["C:/Users/atomi/OneDrive/Desktop/Dev Projects Curernt/CloodAndFriends/CloodAndFriends/CloodTest/SecretStoreTests.cs"],"prompt":"Ok, we\u0027ll also need the /U switch on set and get and the current logged in user. \n\n"}
+{
+  "files": [
+    "C:/Users/atomi/OneDrive/Desktop/Dev Projects Curernt/CloodAndFriends/CloodAndFriends/Clood/CloodFileMap.cs"
+  ],
+  "prompt": "We need a new class that takes a folder, it checks for a .gitignore,\n\nThe function\u0027s main purpose is to iterate through the folder and create a yaml map.\n\nuse VYaml.\n\nCreate a struct for dictionary and file to be seralized.\n\nWhen iterating the files, obey the gitignore.\n\nalso ignore any obvious generated folders like node_modules bin if there is a cs proj, etc ,etc.\n\nPut this file in Clood and call it CloodFileMap\n"
+}
