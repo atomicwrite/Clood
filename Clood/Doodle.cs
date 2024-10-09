@@ -1,5 +1,7 @@
 namespace Clood;
 
+using System;
+
 public class Doodle
 {
     public int Add(int a, int b)
@@ -66,5 +68,10 @@ public class Doodle
         if (n <= 1)
             return n;
         return Fibonacci(n - 1) + Fibonacci(n - 2);
+    }
+
+    public void PrintCurrentTime()
+    {
+        Console.WriteLine($"Current time: {DateTime.Now.ToString("HH:mm:ss")}");
     }
 }
