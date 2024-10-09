@@ -13,19 +13,18 @@ public static class GitHelpers
             var commitMessage = Console.ReadLine();
             await Git.CommitChanges(workingDirectory, commitMessage);
             Console.WriteLine("Changes committed successfully.");
+            return false;
         }
-        else
-        {
-            Console.Write(
-                "Proceeding with uncommitted changes might affect the script's behavior. Do you want to exit? (y/n): ");
-            if (Console.ReadLine().ToLower() == "y")
-            {
-                Console.WriteLine("Exiting script. No changes were made.");
-                return true;
-            }
 
-            Console.WriteLine("Proceeding with uncommitted changes. Please be cautious.");
+        Console.Write(
+            "Proceeding with uncommitted changes might affect the script's behavior. Do you want to exit? (y/n): ");
+        if (Console.ReadLine().ToLower() == "y")
+        {
+            Console.WriteLine("Exiting script. No changes were made.");
+            return true;
         }
+
+        Console.WriteLine("Proceeding with uncommitted changes. Please be cautious.");
 
         return false;
     }
@@ -37,22 +36,21 @@ public static class GitHelpers
         {
             await Git.SwitchToBranch(workingDirectory, currentBranch);
             Console.WriteLine("Changes abandoned. Switched back to the original branch.");
+            return;
         }
-        else
+
+        Console.WriteLine("Attempting to merge changes despite the error...");
+        try
         {
-            Console.WriteLine("Attempting to merge changes despite the error...");
-            try
-            {
-                var currentBranchName = await Git.GetCurrentBranch(workingDirectory);
-                await Git.CommitChanges(workingDirectory, "Changes made by Claudia AI (with errors)");
-                await Git.MergeChanges(workingDirectory, currentBranch, currentBranchName);
-                Console.WriteLine("Changes merged successfully.");
-            }
-            catch (Exception mergeEx)
-            {
-                Console.WriteLine($"Error merging changes: {mergeEx.Message}");
-                Console.WriteLine("You may need to resolve conflicts manually.");
-            }
+            var currentBranchName = await Git.GetCurrentBranch(workingDirectory);
+            await Git.CommitChanges(workingDirectory, "Changes made by Claudia AI (with errors)");
+            await Git.MergeChanges(workingDirectory, currentBranch, currentBranchName);
+            Console.WriteLine("Changes merged successfully.");
+        }
+        catch (Exception mergeEx)
+        {
+            Console.WriteLine($"Error merging changes: {mergeEx.Message}");
+            Console.WriteLine("You may need to resolve conflicts manually.");
         }
     }
 

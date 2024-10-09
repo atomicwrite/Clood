@@ -4,13 +4,13 @@ namespace Clood;
 
 public class CloodServer
 {
-    public static void Start(string? url)
+    public static void Start(string? url,string gitRoot)
     {
         var builder = WebApplication.CreateBuilder();
 
         var app = builder.Build();
 
-        CloodApi.ConfigureApi(app);
+        CloodApi.ConfigureApi(app,gitRoot);
         if (!string.IsNullOrWhiteSpace(url))
             app.Run(url);
         else

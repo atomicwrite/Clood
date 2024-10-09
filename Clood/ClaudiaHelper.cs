@@ -2,6 +2,7 @@
 using Markdig.Syntax;
 using Newtonsoft.Json;
 using Claudia;
+using Microsoft.Extensions.Configuration;
 
 namespace Clood;
 
@@ -32,6 +33,34 @@ public static class ClaudiaHelper
             return null;
         }
     }
+
+    private static Anthropic anthropic;
+
+    public static void SetupApiKey()
+    {
+        var config = new ConfigurationBuilder()
+            .AddUserSecrets<Program>()
+            .AddEnvironmentVariables()
+            .Build();
+
+        var apiKey = config["clood-key"];
+
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new Exception("Missing clood-key in user secrets or environment variables.");
+        }
+
+        if (Environment.GetEnvironmentVariable("clood-key") != null)
+        {
+            Console.WriteLine("Warning: Using clood-key from environment variable is unsafe.");
+        }
+
+        anthropic = new Anthropic
+        {
+            ApiKey = apiKey
+        };
+    }
+
     private static string ExtractJsonFromMarkdown(string markdown)
     {
         var pipeline = new MarkdownPipelineBuilder().Build();
@@ -45,18 +74,20 @@ public static class ClaudiaHelper
         return string.Join(Environment.NewLine, jsonBlock.Lines.Lines);
     }
 
-    public static bool IsOverloadedError(Exception ex)
+    private static bool IsOverloadedError(Exception ex)
     {
         if (ex is ClaudiaException claudiaEx)
         {
             return (int)claudiaEx.Status == 529 && claudiaEx.Name == "overloaded_error";
         }
+
         return false;
     }
 
-    public static async Task<string?> RetryOnOverloadedError(Func<Task<string?>> action, int maxRetries = 3, int delayMs = 1000)
+    private static async Task<string?> RetryOnOverloadedError(Func<Task<string?>> action, int maxRetries = 3,
+        int delayMs = 1000)
     {
-        for (int i = 0; i < maxRetries; i++)
+        for (var i = 0; i < maxRetries; i++)
         {
             try
             {
@@ -66,7 +97,8 @@ public static class ClaudiaHelper
             {
                 if (IsOverloadedError(ex))
                 {
-                    Console.WriteLine($"Overloaded error detected. Retrying in {delayMs}ms... (Attempt {i + 1}/{maxRetries})");
+                    Console.WriteLine(
+                        $"Overloaded error detected. Retrying in {delayMs}ms... (Attempt {i + 1}/{maxRetries})");
                     await Task.Delay(delayMs);
                     delayMs *= 2; // Exponential backoff
                 }
@@ -76,22 +108,48 @@ public static class ClaudiaHelper
                 }
             }
         }
+
         throw new Exception($"Failed after {maxRetries} attempts due to overloaded errors.");
     }
-}
 
+    public static async Task<string?> SendRequestToClaudia(string prompt, string root_folder, string systemPrompt,
+        List<string> files)
+    {
+        return await RetryOnOverloadedError(async () =>
+        {
+            try
+            {
+                var sources = files.Select(f =>
+                    new Content(File.ReadAllText(f)));
+                var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
+                var instruction = "";
+                if (!string.IsNullOrEmpty(systemPrompt))
+                {
+                    instruction = systemPrompt;
+                }
 
+                instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict,prompt,root_folder);
 
+                var message = await anthropic.Messages.CreateAsync(new()
+                {
+                    Model = Models.Claude3_5Sonnet,
+                    MaxTokens = 4000,
+                    Messages = [new() { Role = Roles.User, Content = [..sources, instruction, prompt] }]
+                });
 
+                return message.Content[0].Text;
+            }
+            catch (ClaudiaException ex)
+            {
+                if (IsOverloadedError(ex))
+                {
+                    throw; // This will be caught by RetryOnOverloadedError
+                }
 
-public class FileChanges
-{
-    public List<FileContent> ChangedFiles { get; set; } = new List<FileContent>();
-    public List<FileContent> NewFiles { get; set; } = new List<FileContent>();
-}
-
-public class FileContent
-{
-    public string Filename { get; set; }
-    public string Content { get; set; }
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"Error Code: {(int)ex.Status} - {ex.Name}");
+                return null;
+            }
+        });
+    }
 }

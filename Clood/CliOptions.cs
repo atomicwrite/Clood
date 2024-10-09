@@ -32,7 +32,7 @@ public class CliOptions
 
     public bool Validate()
     {
-        bool isValid = true;
+        var isValid = true;
         if (Server)
         {
             

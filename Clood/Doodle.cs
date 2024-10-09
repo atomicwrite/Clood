@@ -31,7 +31,7 @@ public class Doodle
     {
         if (b == 0)
         {
-            throw new System.DivideByZeroException("Cannot divide by zero.");
+            throw new DivideByZeroException("Cannot divide by zero.");
         }
         return a / b;
     }
