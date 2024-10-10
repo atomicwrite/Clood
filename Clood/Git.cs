@@ -27,9 +27,9 @@ public static partial class Git
             baseBranchName = cleanBranchRegex.Replace($"Clood-empty-prompt", "");
         }
 
-        if (baseBranchName.Length > 25)
+        if (baseBranchName.Length > 15)
         {
-            baseBranchName = baseBranchName[..25];
+            baseBranchName = baseBranchName[..15];
         }
 
         var branchName = baseBranchName.Trim('-');
