@@ -7,6 +7,7 @@ namespace Clood;
 public static partial class Git
 {
     public static string PathToGit { get; set; } = "git";
+
     public static async Task<string> GetCurrentBranch(string workingDirectory)
     {
         var result = await Cli.Wrap(PathToGit)
@@ -19,14 +20,19 @@ public static partial class Git
     public static async Task<string> CreateNewBranch(string workingDirectory, List<string> files)
     {
         var filesList = string.Join(",", files.Select(Path.GetFileName).Take(4));
-        var baseBranchName = CleanBranchRegex().Replace($"Clood-{filesList}", "");
+        var cleanBranchRegex = CleanBranchRegex();
+        var baseBranchName = cleanBranchRegex.Replace($"Clood-{filesList}", "");
+        if (filesList.Length == 0)
+        {
+            baseBranchName = cleanBranchRegex.Replace($"Clood-empty-prompt", "");
+        }
 
         if (baseBranchName.Length > 25)
         {
-            baseBranchName = baseBranchName[..25]; 
+            baseBranchName = baseBranchName[..25];
         }
 
-        var branchName = baseBranchName;
+        var branchName = baseBranchName.Trim('-');
         var counter = 1;
 
         while (await BranchExists(workingDirectory, branchName))
@@ -35,7 +41,7 @@ public static partial class Git
             counter++;
         }
 
-        
+
         await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments($"checkout -b {branchName}")
@@ -72,7 +78,7 @@ public static partial class Git
                     .WithWorkingDirectory(workingDirectory)
                     .WithArguments($"add \"{file}\"")
                     .ExecuteBufferedAsync();
-                
+
                 Console.WriteLine($"Git add output for {file}: {addResult.StandardOutput}");
                 Console.WriteLine($"Git add error for {file} (if any): {addResult.StandardError}");
             }
@@ -115,6 +121,7 @@ public static partial class Git
 
         return result.StandardOutput.Trim();
     }
+
     public static async Task<bool> CommitChanges(string workingDirectory, string message)
     {
         try
@@ -158,8 +165,9 @@ public static partial class Git
         try
         {
             // First, commit changes on the new branch
-            var commitSuccess = await CommitChanges(workingDirectory, $"Changes made by Claudia AI on branch {newBranchName}");
-            
+            var commitSuccess =
+                await CommitChanges(workingDirectory, $"Changes made by Claudia AI on branch {newBranchName}");
+
             if (!commitSuccess)
             {
                 Console.WriteLine("No changes to merge.");
