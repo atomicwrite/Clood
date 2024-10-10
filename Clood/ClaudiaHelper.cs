@@ -127,13 +127,9 @@ public static class ClaudiaHelper
                 var sources = files.Select(f =>
                     new Content(File.ReadAllText(f)));
                 var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
-                var instruction = "";
-                if (!string.IsNullOrEmpty(systemPrompt))
-                {
-                    instruction = systemPrompt;
-                }
-
-                instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder);
+             
+                var yamlMap = new CloodFileMap(root_folder).CreateYamlMap();
+             var   instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder,yamlMap);
 
                 var message = await anthropic.Messages.CreateAsync(new()
                 {
