@@ -1,8 +1,9 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using CliWrap;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace Clood;
 
@@ -16,11 +17,12 @@ public static class CloodApi
         {
             try
             {
+                Log.Information("Starting Clood changes for request: {@Request}", request);
                 return await CreateCloodApi.CreateCloodChanges(request);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Log.Error(e, "Error occurred while starting Clood changes");
                 return CloodStartErrorResponse(e);
             }
         });
@@ -28,11 +30,12 @@ public static class CloodApi
         {
             try
             {
+                Log.Information("Merging Clood changes for request: {@Request}", request);
                 return await MergeCloodApi.MergeCloodChanges(request);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Log.Error(e, "Error occurred while merging Clood changes");
                 return CloodMergeErrorResponse(e);
             }
         });
@@ -40,20 +43,23 @@ public static class CloodApi
         {
             try
             {
+                Log.Information("Reverting Clood changes for request: {Request}", request);
                 return await RevertCloodApi.RevertCloodChanges(request);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Log.Error(e, "Error occurred while reverting Clood changes");
                 return CloodMergeRevertResponse(e);
             }
         });
  
         GitRoot = gitRoot;
+        Log.Information("API configured with GitRoot: {GitRoot}", GitRoot);
     }
 
     private static IResult CloodMergeRevertResponse(Exception e)
     {
+        Log.Error(e, "CloodMergeRevertResponse error");
         return Results.Ok(new CloodResponse<string>()
         {
             Data = "",
@@ -64,6 +70,7 @@ public static class CloodApi
 
     private static IResult CloodMergeErrorResponse(Exception e)
     {
+        Log.Error(e, "CloodMergeErrorResponse error");
         return Results.Ok(new CloodResponse<string>()
         {
             Data = "",
@@ -74,6 +81,7 @@ public static class CloodApi
 
     private static IResult CloodStartErrorResponse(Exception e)
     {
+        Log.Error(e, "CloodStartErrorResponse error");
         return Results.Ok(new CloodResponse<CloodStartResponse>()
         {
             Data = new CloodStartResponse()
