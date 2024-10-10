@@ -49,8 +49,11 @@ public static partial class Git
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"checkout -b {branchName}")
                 .ExecuteBufferedAsync();
-          Console.WriteLine($"Git git branch: {result.StandardOutput}");
-          Console.WriteLine($"Git git branch: {result.StandardError}");
+          if (result.ExitCode != 0)
+          {
+              throw new Exception($"Could not Switch branches {result.StandardOutput} {result.StandardError} ");
+          }
+         
         }
         catch (Exception e)
         {
