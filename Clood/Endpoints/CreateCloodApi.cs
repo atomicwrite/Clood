@@ -10,7 +10,8 @@ public static class CreateCloodApi
     {
         Log.Information("Starting CreateCloodChanges method");
         var response = new CloodResponse<CloodStartResponse>();
-        var missing = request.Files.Where(a => !File.Exists(a)).ToArray();
+        
+        var missing = request.Files.Where(a => !File.Exists(Path.Join(CloodApi.GitRoot, a))).ToArray();
         if (missing.Length != 0)
         {
             Log.Warning("Files are missing: {MissingFiles}", string.Join(",", missing));
@@ -61,7 +62,7 @@ public static class CreateCloodApi
         Log.Information("Sending request to Claude AI");
         var claudeResponse =
             await ClaudiaHelper.SendRequestToClaudia(request.Prompt, CloodApi.GitRoot, request.SystemPrompt,
-                request.Files);
+                request.Files.Select(a=>Path.Join(CloodApi.GitRoot,a)).ToList());
 
         if (string.IsNullOrWhiteSpace(claudeResponse))
         {
