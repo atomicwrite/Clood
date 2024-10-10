@@ -36,7 +36,17 @@ public static class CreateCloodApi
             }
 
             session.OriginalBranch = await Git.GetCurrentBranch(CloodApi.GitRoot);
-            session.NewBranch = await Git.CreateNewBranch(CloodApi.GitRoot, request.Files);
+            try
+            {
+                session.NewBranch = await Git.CreateNewBranch(CloodApi.GitRoot, request.Files);
+            }
+            catch (Exception e)
+            {
+                response.Success = false;
+                response.ErrorMessage =
+                    $"Could not create new Branch {e.Message}";
+                return Results.Ok(response);
+            }
         }
 
         var claudeResponse =
