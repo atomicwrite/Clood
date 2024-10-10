@@ -19,11 +19,11 @@ public static partial class Git
     public static async Task<string> CreateNewBranch(string workingDirectory, List<string> files)
     {
         var filesList = string.Join(",", files.Select(Path.GetFileName).Take(4));
-        var baseBranchName = CleanBranchRegex().Replace($"Modifications-{filesList}", "");
+        var baseBranchName = CleanBranchRegex().Replace($"Clood-{filesList}", "");
 
-        if (baseBranchName.Length > 15)
+        if (baseBranchName.Length > 25)
         {
-            baseBranchName = baseBranchName[..15]; 
+            baseBranchName = baseBranchName[..25]; 
         }
 
         var branchName = baseBranchName;
