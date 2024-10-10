@@ -42,11 +42,19 @@ public static partial class Git
         }
 
 
-        await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments($"checkout -b {branchName}")
-            .ExecuteAsync();
+        try
+        {
+            await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments($"checkout -b {branchName}")
+                .ExecuteAsync();
 
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
         Console.WriteLine($"Created and switched to new branch: {branchName}");
         return branchName;
     }
