@@ -112,7 +112,7 @@ public static partial class Git
 
                 if (addResult.ExitCode != 0)
                 {
-                    Log.Warning($"Git add failed for {file}: {addResult.StandardError}");
+                    Log.Warning($"Git add failed for {file}: {addResult.StandardError}{addResult.StandardError}");
                 }
                 else
                 {

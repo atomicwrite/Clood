@@ -2,45 +2,62 @@ namespace Clood;
 
 public static class ClaudiaHelperPrompts
 {
-    public static string FormatPromptHelperPrompt(string filesDict, string prompt,   string folderLayoutYaml ) =>
-         $$"""
-            You are an AI assistant tasked with helping users improve their prompts for AI-assisted coding tasks. Your goal is to analyze the given information and suggest an upgraded prompt that will lead to better results.
+    public static string FormatPromptHelperPrompt(string filesDict, string prompt, string folderLayoutYaml) =>
+        $$"""
+          You are an AI assistant tasked with helping users improve their prompts for AI-assisted coding tasks. Your goal is to analyze the given information and suggest an upgraded prompt that will lead to better results.
+
+          First, review the project layout:
+          <project_layout>
+          {{folderLayoutYaml}}
+          </project_layout>
+
+          Next, examine a dictionary where the filename is the key and the value is the content relevant files:
+          <file_contents>
+          {{filesDict}}
+          </file_contents>
+
+          Now, consider the original prompt the user was thinking about:
+          <original_prompt>
+          {{prompt}}
+          </original_prompt>
+
+          To create an improved prompt, follow these steps:
+
+          1. Analyze the project layout to understand the structure and context of the codebase.
+          2. Review the file contents to identify specific code elements, patterns, or issues that need to be addressed.
+          3. Evaluate the original prompt to determine its strengths and weaknesses.
+          4. Consider the following aspects when formulating the improved prompt:
+             a. Clarity and specificity of the request
+             b. Relevance to the project structure and file contents
+             c. Inclusion of necessary context and constraints
+             d. Guidance on desired output format or style
+             e. Any potential edge cases or considerations
+
+          5. Craft an upgraded prompt that addresses the identified areas for improvement and incorporates the relevant information from the project layout and file contents.
+
+          6.After processing, format your response as a JSON object with two properties: 
             
-            First, review the project layout:
-            <project_layout>
-            {{folderLayoutYaml}}
-            </project_layout>
-            
-            Next, examine a dictionary where the filename is the key and the value is the content relevant files:
-            <file_contents>
-            {{filesDict}}
-            </file_contents>
-            
-            Now, consider the original prompt the user was thinking about:
-            <original_prompt>
-            {{prompt}}
-            </original_prompt>
-            
-            To create an improved prompt, follow these steps:
-            
-            1. Analyze the project layout to understand the structure and context of the codebase.
-            2. Review the file contents to identify specific code elements, patterns, or issues that need to be addressed.
-            3. Evaluate the original prompt to determine its strengths and weaknesses.
-            4. Consider the following aspects when formulating the improved prompt:
-               a. Clarity and specificity of the request
-               b. Relevance to the project structure and file contents
-               c. Inclusion of necessary context and constraints
-               d. Guidance on desired output format or style
-               e. Any potential edge cases or considerations
-            
-            5. Craft an upgraded prompt that addresses the identified areas for improvement and incorporates the relevant information from the project layout and file contents.
-            
-            Present your improved prompt within <improved_prompt> tags. After the improved prompt, provide a brief explanation of the changes and improvements you made, enclosed in <explanation> tags.
-            
-            Remember, your task is not to complete the coding task itself, but to create a better prompt that will guide an AI assistant in completing the task more effectively.
-            """;
-    
-    public static string FormatCodeHelperPrompt(string filesDict, string prompt, string rootFolder, string folderLayoutYaml)
+                         - "improvedPropmpt": The improved prompt
+                          - "answered": If you were able to answer the question or not
+              If you can not do the task, tell us by the answered property later.
+
+          7. Present your improved prompt within <improved_prompt> tags. After the improved prompt, provide a brief explanation of the changes and improvements you made, enclosed in <explanation> tags.
+
+          Remember, your task is not to complete the coding task itself, but to create a better prompt that will guide an AI assistant in completing the task more effectively.
+          Here's an example of how your output should be structured:
+          
+                     ```json
+                     {
+                       "improvedPropmpt": "blah blah blah",
+                       
+                       "answered": true
+                     }
+                     ```
+
+          """;
+
+    public static string FormatCodeHelperPrompt(string filesDict, string prompt, string rootFolder,
+        string folderLayoutYaml)
         => $$"""
              You are tasked with applying a specific prompt within the context multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
 
@@ -55,7 +72,7 @@ public static class ClaudiaHelperPrompts
              <folder_layout>
              {{folderLayoutYaml}}
              </folder_layout>
-         
+
 
              4. Read all the files, some may not need to be changed and are just there for context:
                a. Generate the modified content based on the prompt
@@ -106,7 +123,7 @@ public static class ClaudiaHelperPrompts
               as empty arrays.
 
              11. Remember to include all modified files in the "changedFiles" array and any new files in the "newFiles" array.
-             
+
              12. THINK THINK THINK THINK THINK THINK
              """;
 }

@@ -1,4 +1,5 @@
 using CliWrap;
+using CliWrap.Buffered;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
@@ -59,11 +60,16 @@ public static class MergeCloodApi
 
             Log.Information("Switching to original branch and merging changes for session {SessionId}", request.Id);
             await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-            await Cli.Wrap(Git.PathToGit)
+            var result = await Cli.Wrap(Git.PathToGit)
                 .WithWorkingDirectory(session.GitRoot)
+                .WithValidation(CommandResultValidation.None)
                 .WithArguments($"merge {session.NewBranch}")
-                .ExecuteAsync();
+                .ExecuteBufferedAsync();
 
+            if (result.ExitCode != 0)
+            {
+                throw new Exception($"Could not merge {result.StandardOutput} {result.StandardError}");
+            }
             Log.Information("Successfully merged changes for session {SessionId}", request.Id);
             response.Success = true;
             response.Data = "Changes merged successfully.";
