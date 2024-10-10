@@ -38,8 +38,8 @@ public static class MergeCloodApi
 
             var commitSuccess = await Git.CommitSpecificFiles(
                 session.GitRoot,
-                session.ProposedChanges.ChangedFiles.Select(f => f.Filename)
-                    .Concat(session.ProposedChanges.NewFiles.Select(f => f.Filename)).ToList(),
+                (session.ProposedChanges.ChangedFiles ?? []).Select(f => f.Filename)
+                    .Concat((session.ProposedChanges.NewFiles ?? []).Select(f => f.Filename)).ToList(),
                 $"Changes made by Claudia AI on branch {session.NewBranch}"
             );
 
