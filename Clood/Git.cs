@@ -45,7 +45,7 @@ public static partial class Git
         try
         {
           result =  await Cli.Wrap(PathToGit)
-              
+              .WithValidation(CommandResultValidation.None)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"checkout -b {branchName}")
                 .ExecuteBufferedAsync();
