@@ -23,6 +23,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CloodKey\CloodKey.csproj" />
+      <ProjectReference Include="..\Clood\Clood.csproj" />
     </ItemGroup>
 
 </Project>

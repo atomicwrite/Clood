@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using VYaml.Annotations;
 using VYaml.Serialization;
 using VYaml.Emitter;
 
@@ -19,7 +20,10 @@ namespace Clood
             {
                 "node_modules",
                 "bin",
-                "obj"
+                "obj",
+                "venv",
+                ".venv"
+                
             };
             LoadGitIgnore();
         }
@@ -78,8 +82,8 @@ namespace Clood
             return _ignoredPaths.Any(ignoredPath => path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase));
         }
     }
-
-    public struct FilePathInfo
+    [YamlObject]
+    public partial struct FilePathInfo
     {
         public long Size { get; set; }
         public DateTime LastModified { get; set; }
