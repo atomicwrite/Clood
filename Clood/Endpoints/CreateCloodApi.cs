@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
 namespace Clood;
-
+ 
 public static class CreateCloodApi
 {
     public static async Task<IResult> CreateCloodChanges([FromBody] CloodRequest request)
