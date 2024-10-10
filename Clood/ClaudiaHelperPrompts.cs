@@ -1,8 +1,8 @@
-﻿namespace Clood;
+namespace Clood;
 
 public static class ClaudiaHelperPrompts
 {
-    public static string FormatCodeHelperPrompt(string filesDict, string prompt, string rootFolder)
+    public static string FormatCodeHelperPrompt(string filesDict, string prompt, string rootFolder, string folderLayoutYaml)
         => $$"""
              You are tasked with applying a specific prompt within the context multiple code files and returning the modified contents in a JSON format. Here's how to proceed:
 
@@ -12,11 +12,12 @@ public static class ClaudiaHelperPrompts
              <file_dictionary>
              {{filesDict}}
               </file_dictionary> 
-
-             3. The prompt to apply to each file is:
-             <prompt>
-             {{prompt}}
-             </prompt>
+              
+             8. A YAML representation of the entire project folder, including file sizes and last modified dates, is provided below:
+             <folder_layout>
+             {{folderLayoutYaml}}
+             </folder_layout>
+         
 
              4. Read all the files, some may not need to be changed and are just there for context:
                a. Generate the modified content based on the prompt
@@ -41,6 +42,13 @@ public static class ClaudiaHelperPrompts
                 
              7. Ensure that the JSON is properly formatted and escaped, especially for multi-line code contents.
 
+             8. The prompt to apply to each file is:
+             <prompt>
+             {{prompt}}
+             </prompt>
+
+             9. The path for the folder layout is the same as the root folder: <root_folder>{{rootFolder}} </root_folder>
+
              Here's an example of how your output should be structured:
 
              ```json
@@ -55,12 +63,12 @@ public static class ClaudiaHelperPrompts
                "answered": true
              }
              ```
-             8. Set the answered property to true only if you know the answer or can make a well-informed guess;
+             10. Set the answered property to true only if you know the answer or can make a well-informed guess;
               otherwise set the answered property  to false. If you can't answer, leave the changedFiles and newFiles 
               as empty arrays.
 
-             9. Remember to include all modified files in the "changedFiles" array and any new files in the "newFiles" array.
+             11. Remember to include all modified files in the "changedFiles" array and any new files in the "newFiles" array.
              
-             10. THINK THINK THINK THINK THINK THINK
+             12. THINK THINK THINK THINK THINK THINK
              """;
 }
