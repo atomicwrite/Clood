@@ -1,9 +1,10 @@
+using System.Text.RegularExpressions;
 using CliWrap;
 using CliWrap.Buffered;
 
 namespace Clood;
 
-public static class Git
+public static partial class Git
 {
     public static string PathToGit { get; set; } = "git";
     public static async Task<string> GetCurrentBranch(string workingDirectory)
@@ -18,13 +19,11 @@ public static class Git
     public static async Task<string> CreateNewBranch(string workingDirectory, List<string> files)
     {
         var filesList = string.Join(",", files.Select(Path.GetFileName).Take(4));
-        var baseBranchName = $"Modifications-{filesList}";
-    
-        // Remove invalid characters and truncate if necessary
-        baseBranchName = new string(baseBranchName.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_').ToArray());
-        if (baseBranchName.Length > 50)
+        var baseBranchName = CleanBranchRegex().Replace($"Modifications-{filesList}", "");
+
+        if (baseBranchName.Length > 15)
         {
-            baseBranchName = baseBranchName.Substring(0, 47) + "...";
+            baseBranchName = baseBranchName[..15]; 
         }
 
         var branchName = baseBranchName;
@@ -226,4 +225,7 @@ public static class Git
             .ExecuteAsync();
         Console.WriteLine($"Deleted branch: {branchName}");
     }
+
+    [GeneratedRegex("[^a-zA-Z0-9-_]")]
+    private static partial Regex CleanBranchRegex();
 }
