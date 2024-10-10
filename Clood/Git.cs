@@ -41,14 +41,16 @@ public static partial class Git
             counter++;
         }
 
-
+        BufferedCommandResult result;
         try
         {
-            await Cli.Wrap(PathToGit)
+          result =  await Cli.Wrap(PathToGit)
+              
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"checkout -b {branchName}")
-                .ExecuteAsync();
-
+                .ExecuteBufferedAsync();
+          Console.WriteLine($"Git git branch: {result.StandardOutput}");
+          Console.WriteLine($"Git git branch: {result.StandardError}");
         }
         catch (Exception e)
         {
