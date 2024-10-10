@@ -24,7 +24,7 @@ public static partial class Git
         var baseBranchName = cleanBranchRegex.Replace($"Clood-{filesList}", "");
         if (filesList.Length == 0)
         {
-            baseBranchName = cleanBranchRegex.Replace($"Clood-empty-prompt", "");
+            baseBranchName = cleanBranchRegex.Replace($"Clood-empty", "");
         }
 
         if (baseBranchName.Length > 15)
