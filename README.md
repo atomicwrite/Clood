@@ -9,7 +9,7 @@ Clood is a tool that integrates Claude AI with your local development environmen
 If you don't have .NET installed, visit the link above and follow the installation instructions for your operating system.
 
 ## Building Clood for Release
-
+ 
 1. Clone the repository:
    ```
    git clone https://github.com/atomicwrite/Clood.git
@@ -20,13 +20,14 @@ If you don't have .NET installed, visit the link above and follow the installati
    ```
    dotnet publish -c Release
    ```
+ 
 
 The release build will be available in the `bin/Release/net8.0/publish` directory.
 
 ## Adding a .NET Secret (Optional)
 
 To securely store your API key, you can use .NET's secret manager:
-
+ 
 1. Initialize the user secrets for the project:
    ```
    dotnet user-secrets init
@@ -35,6 +36,7 @@ To securely store your API key, you can use .NET's secret manager:
 2. Add your API key:
    ```
    dotnet user-secrets set "clood-key" "your-api-key-here"
+ 
    ```
 
 Note: You can skip this step for now and use an environment variable instead (see below), but this method will be phased out in future versions.
@@ -55,6 +57,7 @@ For now, you can set the API key as an environment variable:
 
 Remember to replace `your-api-key-here` with your actual API key.
 
+ 
 ## Starting the Server
 
 To start the Clood server:
@@ -62,7 +65,7 @@ To start the Clood server:
 1. Navigate to the publish directory:
    ```
    cd bin/Release/net8.0/publish
-   ```
+ 
 
 2. Run the server:
    ```
