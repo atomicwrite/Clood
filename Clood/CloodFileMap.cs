@@ -12,6 +12,7 @@ namespace Clood
     {
         private readonly string _folderPath;
         private readonly HashSet<string> _ignoredPaths;
+        private GitIgnoreCompiler.CompileResult _gitParser;
 
         public CloodFileMap(string folderPath)
         {
@@ -31,16 +32,13 @@ namespace Clood
         private void LoadGitIgnore()
         {
             var gitIgnorePath = Path.Combine(_folderPath, ".gitignore");
-            if (!File.Exists(gitIgnorePath)) return;
-            foreach (var line in File.ReadLines(gitIgnorePath))
+            if (!File.Exists(gitIgnorePath))
             {
-                var trimmedLine = line.Trim();
-                if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#")) continue;
-                if (trimmedLine.EndsWith("/") || trimmedLine.EndsWith("/*"))
-                {
-                    _ignoredPaths.Add(trimmedLine);
-                }
+                _gitParser = GitIgnoreCompiler.Compile("");
+                return;
             }
+
+            _gitParser = GitIgnoreCompiler.Compile(File.ReadAllText(gitIgnorePath));
         }
 
         public string CreateYamlMap()
@@ -79,6 +77,11 @@ namespace Clood
 
         private bool IsIgnored(string path)
         {
+            if (_gitParser.Denies(path))
+            {
+                return true;
+            }
+
             return _ignoredPaths.Any(ignoredPath =>
                 path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase) ||
                 path.Contains($"/{ignoredPath}/"));
