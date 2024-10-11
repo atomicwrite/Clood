@@ -6,11 +6,9 @@ using Microsoft.Extensions.Configuration;
 
 namespace Clood;
 
-
-
 public static class ClaudiaHelper
 {
-    public static FileChanges? Claudia2Json(string response)
+    public static PromptImprovement? ClaudiaPrompt2Json(string response)
     {
         try
         {
@@ -18,6 +16,31 @@ public static class ClaudiaHelper
             if (string.IsNullOrEmpty(jsonContent))
             {
                 Console.WriteLine("Error: No JSON content found in the response.");
+                return null;
+            }
+
+            return JsonConvert.DeserializeObject<PromptImprovement>(jsonContent);
+        }
+        catch (JsonException e)
+        {
+            Console.WriteLine($"JSON parsing ClaudiaPrompt2Json error: {e.Message}");
+            return null;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Unexpected  ClaudiaPrompt2Json error: {e.Message}");
+            return null;
+        }
+    }
+
+    public static FileChanges? Claudia2Json(string response)
+    {
+        try
+        {
+            var jsonContent = ExtractJsonFromMarkdown(response);
+            if (string.IsNullOrEmpty(jsonContent))
+            {
+                Console.WriteLine("Error: Claudia2Json No JSON content found in the response.");
                 return null;
             }
 
@@ -31,12 +54,12 @@ public static class ClaudiaHelper
         }
         catch (JsonException e)
         {
-            Console.WriteLine($"JSON parsing error: {e.Message}");
+            Console.WriteLine($"JSON Claudia2Json parsing error: {e.Message}");
             return null;
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Unexpected error: {e.Message}");
+            Console.WriteLine($"Unexpected Claudia2Json error: {e.Message}");
             return null;
         }
     }
@@ -118,7 +141,44 @@ public static class ClaudiaHelper
 
         throw new Exception($"Failed after {maxRetries} attempts due to overloaded errors.");
     }
+    public static async Task<string?> SendPromptHelpRequestToClaudia(string prompt, string root_folder )
+    {
+        return await RetryOnOverloadedError(async () =>
+        {
+            try
+            {
+           
+              
 
+                var yamlMap = new CloodFileMap(root_folder).CreateYamlMap();
+                var instruction = ClaudiaHelperPrompts.FormatPromptHelperPrompt(
+              
+                    prompt,
+                    yamlMap
+                );
+           
+                var message = await anthropic.Messages.CreateAsync(new()
+                {
+                    Model = Models.Claude3_5Sonnet,
+                    MaxTokens = 4000,
+                    Messages = [new() { Role = Roles.User, Content = [  instruction ] }],
+                });
+
+                return message.Content[0].Text;
+            }
+            catch (ClaudiaException ex)
+            {
+                if (IsOverloadedError(ex))
+                {
+                    throw; // This will be caught by RetryOnOverloadedError
+                }
+
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"Error Code: {(int)ex.Status} - {ex.Name}");
+                return null;
+            }
+        });
+    }
     public static async Task<string?> SendRequestToClaudia(string prompt, string root_folder, string systemPrompt,
         List<string> files)
     {
@@ -129,9 +189,10 @@ public static class ClaudiaHelper
                 var sources = files.Select(f =>
                     new Content(File.ReadAllText(f)));
                 var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
-             
+
                 var yamlMap = new CloodFileMap(root_folder).CreateYamlMap();
-             var   instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder,yamlMap);
+           
+                var instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder, yamlMap);
 
                 var message = await anthropic.Messages.CreateAsync(new()
                 {

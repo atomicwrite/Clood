@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace Clood;
+namespace Clood.Endpoints;
 
 public static class MergeCloodApi
 {

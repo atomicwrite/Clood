@@ -2,7 +2,7 @@ namespace Clood;
 
 public static class ClaudiaHelperPrompts
 {
-    public static string FormatPromptHelperPrompt(string filesDict, string prompt, string folderLayoutYaml) =>
+    public static string FormatPromptHelperPrompt( string prompt, string folderLayoutYaml) =>
         $$"""
           You are an AI assistant tasked with helping users improve their prompts for AI-assisted coding tasks. Your goal is to analyze the given information and suggest an upgraded prompt that will lead to better results.
 
@@ -11,11 +11,7 @@ public static class ClaudiaHelperPrompts
           {{folderLayoutYaml}}
           </project_layout>
 
-          Next, examine a dictionary where the filename is the key and the value is the content relevant files:
-          <file_contents>
-          {{filesDict}}
-          </file_contents>
-
+         
           Now, consider the original prompt the user was thinking about:
           <original_prompt>
           {{prompt}}
@@ -37,7 +33,7 @@ public static class ClaudiaHelperPrompts
 
           6.After processing, format your response as a JSON object with two properties: 
             
-                         - "improvedPropmpt": The improved prompt
+                         - "improvedPrompt": The improved prompt
                           - "answered": If you were able to answer the question or not
               If you can not do the task, tell us by the answered property later.
 
@@ -48,7 +44,7 @@ public static class ClaudiaHelperPrompts
           
                      ```json
                      {
-                       "improvedPropmpt": "blah blah blah",
+                       "improvedPrompt": "blah blah blah",
                        
                        "answered": true
                      }

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CliWrap;
+using Clood.Endpoints;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,21 @@ public static class CloodApi
 
     public static void ConfigureApi(WebApplication app, string gitRoot)
     {
+        
+        
+        app.MapPost("/api/clood/prompt", async ([FromBody] CloodPromptRequest request) =>
+        {
+            try
+            {
+                Log.Information("Starting Clood changes for request: {@Request}", request);
+                return await CreateCloodPrompt.CreateCloodPromptChanges(request);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Error occurred while starting Clood changes");
+                return CloodPromptErrorResponse(e);
+            }
+        });
         app.MapPost("/api/clood/start", async ([FromBody] CloodRequest request) =>
         {
             try
@@ -60,6 +76,16 @@ public static class CloodApi
     private static IResult CloodMergeRevertResponse(Exception e)
     {
         Log.Error(e, "CloodMergeRevertResponse error");
+        return Results.Ok(new CloodResponse<string>()
+        {
+            Data = "",
+            ErrorMessage = e.Message,
+            Success = false
+        });
+    }
+    private static IResult CloodPromptErrorResponse(Exception e)
+    {
+        Log.Error(e, "CloodPromptErrorResponse error");
         return Results.Ok(new CloodResponse<string>()
         {
             Data = "",

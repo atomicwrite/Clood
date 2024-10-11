@@ -22,8 +22,8 @@ namespace Clood
                 "bin",
                 "obj",
                 "venv",
-                ".venv"
-                
+                ".venv",
+                ".git"
             };
             LoadGitIgnore();
         }
@@ -79,9 +79,12 @@ namespace Clood
 
         private bool IsIgnored(string path)
         {
-            return _ignoredPaths.Any(ignoredPath => path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase));
+            return _ignoredPaths.Any(ignoredPath =>
+                path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase) ||
+                path.Contains($"/{ignoredPath}/"));
         }
     }
+
     [YamlObject]
     public partial struct FilePathInfo
     {

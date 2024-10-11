@@ -11,12 +11,12 @@ public static class CreateCloodPrompt
     public static async Task<IResult> CreateCloodPromptChanges([FromBody] CloodPromptRequest request)
     {
         Log.Information("Starting CreateCloodPromptChanges method");
-        var response = new CloodResponse<string>();
+        var response = new CloodResponse<PromptImprovement>();
 
         try
         {
             // Get the folder layout YAML
-           
+
             var folderLayoutYaml = new CloodFileMap(CloodApi.GitRoot).CreateYamlMap();
             // Get the file contents
             var files = request.Files.Select(a => Path.Join(CloodApi.GitRoot, a)).ToList();
@@ -24,20 +24,11 @@ public static class CreateCloodPrompt
 
 
             // Format the prompt using FormatPromptHelperPrompt
-            var formattedPrompt = ClaudiaHelperPrompts.FormatPromptHelperPrompt(
-                filesDict.ToString(),
-                request.Prompt,
-                folderLayoutYaml
-            );
+
 
             Log.Information("Sending formatted prompt to Claude AI");
-            
-            var claudeResponse = await ClaudiaHelper.SendRequestToClaudia(
-                formattedPrompt,
-                CloodApi.GitRoot,
-                "",
-                files
-            );
+
+            var claudeResponse = await ClaudiaHelper.SendPromptHelpRequestToClaudia(request.Prompt, CloodApi.GitRoot);
 
             if (string.IsNullOrWhiteSpace(claudeResponse))
             {
@@ -48,8 +39,9 @@ public static class CreateCloodPrompt
             }
 
             response.Success = true;
-            response.Data = claudeResponse;
 
+            response.Data = ClaudiaHelper.ClaudiaPrompt2Json(claudeResponse) ??
+                            throw new InvalidDataException("could not parse claud json");
             Log.Information("Successfully processed prompt with Claude AI");
             return Results.Ok(response);
         }
@@ -65,6 +57,6 @@ public static class CreateCloodPrompt
 
 public class CloodPromptRequest
 {
-    public string Prompt { get; set; } = string.Empty; 
+    public string Prompt { get; set; } = string.Empty;
     public List<string> Files { get; set; } = new List<string>();
 }
