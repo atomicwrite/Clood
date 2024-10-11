@@ -36,15 +36,15 @@ Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI
  
 
 2. Install the required NuGet packages:
-   ```
+```bash
 dotnet restore
    ```
 
 3. Set up your Anthropic API key as a user secret:
-   ```
+ ```bash
 dotnet user-secrets set "clood-key" "your-api-key-here"
    ```
-3a. You can optionall
+ 
 
 ## Usage
 
@@ -53,7 +53,7 @@ dotnet user-secrets set "clood-key" "your-api-key-here"
 1. Navigate to your project directory where you want to use Clood.
 
 2. Run Clood with the desired options:
-   ```
+ ```bash
 dotnet run -- [options] <files>
    ```
 
@@ -67,7 +67,7 @@ dotnet run -- [options] <files>
    - `-s, --system-prompt`: Specify a file containing a system prompt for Claude AI
 
    Example:
-   ```
+  ```bash
 dotnet run -- -r /path/to/git/repo -p "Refactor this code for better performance" file1.cs file2.cs
    ```
 
@@ -76,7 +76,7 @@ dotnet run -- -r /path/to/git/repo -p "Refactor this code for better performance
 ### Server Mode
 
 1. Start Clood in server mode:
-   ```
+```bash
 dotnet run -- -m -u http://localhost:5000 dummyfile
    ```
 
