@@ -1,105 +1,157 @@
-# 🌟 Clood Plugin for IntelliJ IDEA 🚀
+ 
+ 
+# Clood: Claude AI-Powered Code Modification Tool
 
-## 🎉 Welcome to Clood! 🎊
+## Introduction
 
-Clood is a game-changing plugin for IntelliJ IDEA that supercharges ⚡ your development workflow. Get ready to
-revolutionize the way you code!
+Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI with Git version control. This application allows developers to leverage Claude's AI to suggest and implement changes to their codebase, all while maintaining version control best practices. Clood now offers both a command-line interface and a server mode for integration with other tools or workflows.
 
-> **🚨 IMPORTANT: Alpha Release 🚨**
->
-> Clood is currently in **ALPHA**. While it's packed with awesome features, you might encounter some bugs 🐛. We're
-> working hard to squash them!
->
-> 📅 **Coming Soon**: We're planning to release Clood on the JetBrains Plugin Store this Sunday, after some final
-> testing. Stay tuned!
+## Features
 
-## 🛠️ Prerequisites
+- Integrates Anthropic's Claude AI for code suggestions and modifications
+- Supports both command-line and server modes
+- Automatically creates new Git branches for AI-suggested changes
+- Checks for uncommitted changes before running to ensure a clean working state
+- Offers options to commit, abandon, or proceed with caution when uncommitted changes are present
+- Applies AI-suggested changes to maintain code integrity
+- Provides options to review, keep, or discard AI-suggested changes
+- Handles merging of approved changes back into the original branch
+- Supports custom system prompts for tailored AI behavior
+- Allows specifying Git path and root directory
+- Offers a version command to check the current Clood version
+- Implements a robust API for server mode operations
+- Supports creating, updating, and deleting files within the Git repository
+- Implements retry logic for handling API overload errors
+- Provides detailed error messages and logging
 
-- IntelliJ IDEA Ultimate (latest version) 💻
+## Prerequisites
 
-## 🏗️ Building the Plugin
+- .NET 6.0 or later
+- Git installed and configured on your system
+- An Anthropic API key for Claude AI
 
-Let's build this bad boy! 🏋️‍♂️
+## Setup
 
-1. Fire up IntelliJ IDEA Ultimate 🔥
-2. Peek into the Gradle tool window (View > Tool Windows > Gradle) 👀
-3. Hunt down the `jar` task in the Gradle tasks list 🕵️‍♂️
-4. Double-click that `jar` like you mean it! 👆👆
-5. Watch the magic happen as Gradle creates your plugin JAR ✨
-6. Find your shiny new JAR in the `build/libs` folder 💎
+1. Clone the repository:
+ 
 
-## 🔌 Installing the Plugin
+2. Install the required NuGet packages:
+   ```
+dotnet restore
+   ```
 
-Time to plug it in! 🔌
+3. Set up your Anthropic API key as a user secret:
+   ```
+dotnet user-secrets set "clood-key" "your-api-key-here"
+   ```
+3a. You can optionall
 
-1. Launch IntelliJ IDEA (the one you want to bedazzle with Clood) 🚀
-2. Navigate to `File > Settings` (on macOS, it's `IntelliJ IDEA > Preferences`) ⚙️
-3. Find your way to `Plugins` in the left sidebar 🧭
-4. Click the gear icon ⚙️ (top right) and choose "Install Plugin from Disk" 💽
-5. Hunt down that JAR file in your `build/libs` folder 🕵️‍♀️
-6. Smash that "OK" button and restart your IDE! 🔄
+## Usage
 
-## 🎬 Setting Up Clood
+### Command-line Mode
 
-Before the show begins, let's set the stage:
+1. Navigate to your project directory where you want to use Clood.
 
-1. In your project's root directory, conjure up a new folder named `clood-groups` 📁✨
-2. This magical folder will be the home of all your Clood group configurations 🏠
+2. Run Clood with the desired options:
+   ```
+dotnet run -- [options] <files>
+   ```
 
-Without this folder, Clood will be sad 😢 (and won't work properly).
+   Options:
+   - `-m, --server`: Start Clood in server mode
+   - `-u, --server-urls`: Specify URLs for the server to listen on (e.g., "http://localhost:5000")
+   - `-v, --version`: Print the Clood version and exit
+   - `-g, --git-path`: Specify the path to the Git executable
+   - `-r, --git-root`: Specify the Git root directory (required)
+   - `-p, --prompt`: Provide a prompt for Claude AI
+   - `-s, --system-prompt`: Specify a file containing a system prompt for Claude AI
 
-## 👆 Features
+   Example:
+   ```
+dotnet run -- -r /path/to/git/repo -p "Refactor this code for better performance" file1.cs file2.cs
+   ```
 
-### 🗂️ Clood Groups
+3. Follow the prompts to review and apply changes.
 
-- Organize your files and prompts like a boss 😎
-- Access your Clood groups from the swanky Clood panel in the IDE 🎛️
-- Groups hang out in the `clood-groups` folder you crafted earlier 🏠
+### Server Mode
 
-### 📄 Clood Files
+1. Start Clood in server mode:
+   ```
+dotnet run -- -m -u http://localhost:5000 dummyfile
+   ```
 
-- Whip up `.clood` files to edit and manage your prompts 📝
-- Work on your Clood prompts outside the panel - freedom! 🕊️
-- Remember to update the prompt in the Clood panel after editing (there's a speedy action for this) ⚡
+2. Use the following API endpoints:
 
-### ➕ Add to Clood Action
+   - `POST /api/clood/start`
+     - Request body: `CloodRequest` object
+     - Response: `CloodResponse<CloodStartResponse>` object
 
-- Right-click on a file in the Project Explorer (it's like magic!) 🖱️
-- Go to "Tools" and choose "Add to Clood" 🧰
-- Watch as your file joins the Clood party! 🎉
+   - `POST /api/clood/merge`
+     - Request body: `MergeRequest` object
+     - Response: `CloodResponse<string>` object
 
-### 📤 Send to Clood Actions
+   - `POST /api/clood/revert`
+     - Request body: Session ID (string)
+     - Response: `CloodResponse<string>` object
 
-- Another right-click adventure in the Project Explorer 🖱️
-- Find these treasures under "Tools": 💎
-    - "Copy To Active Prompt": Your file, now in Clood-vision, er the current clood group! 👁️
-    - "Send to Clood Prompt Helper": Your personal Clood assistant to help you write a prompt. Will replace the current
-      clood file's contents.  🦮
-    - "Add to Clood":  Adds the file(s) to the current group ❤️
+   Example of a `CloodRequest` object:
+   ```json
+   {
+     "prompt": "Refactor this code for better performance",
+     "systemPrompt": "Act as an experienced software engineer",
+     "files": ["file1.cs", "file2.cs"],
+     "gitRoot": "/path/to/git/repo",
+     "useGit": true
+   }
+   ```
 
-### ⚡ Auto-complete Features
+Example of a `CloodResponse` object:
+   ```json
+   {
+     "success": true,
+     "errorMessage": null,
+     "data": {
+       "id": "session-guid",
+       "newBranch": "Modifications-file1-file2",
+       "proposedChanges": {
+         "changedFiles": [
+           {"filename": "file1.cs", "content": "..."},
+           {"filename": "file2.cs", "content": "..."}
+         ],
+         "newFiles": []
+       }
+     }
+   }
+   ```
 
-When you're in a `.clood` file, try these magic spells:
+## How It Works
 
-- `$`: Summons recent files AND auto-adds them to your Clood group! 🧙‍♂️
-- `#`: Calls forth files from your current Clood group 📚
-- `~`: Conjures project symbols for your Clood file 🔮
+1. Clood checks for any uncommitted changes in your working directory.
+2. It sends your specified files and prompt to Claude AI.
+3. Claude analyzes the files and suggests changes.
+4. Clood creates a new Git branch and applies Claude's suggestions.
+5. You can review the changes and decide whether to keep or discard them.
+6. If you choose to keep the changes, they can be merged back into your original branch.
 
-## 🆘 Troubleshooting
+## Error Handling
 
-- If Clood throws a tantrum, try: `File > Invalidate Caches / Restart` 🔄
-- Double-check that `clood-groups` folder - it's crucial! 🔍
+- Clood implements retry logic for handling API overload errors.
+- Detailed error messages are provided for various scenarios, including Git operations, file access, and API communication.
+- In server mode, error responses include a `success` flag and an `errorMessage` field for easy error handling by clients.
 
-## 🆘 Support
+## Contributing
 
-Stuck? Questions? We're here for you! 🦸‍♀️🦸‍♂️
+Contributions to improve Clood are welcome! Please feel free to submit pull requests or open issues to suggest improvements or report bugs.
 
-- Open an issue on our GitHub repo 🐙
-- Or give our support team a shout! 📣
+## License
 
-## 🎭 Final Words
+GPL
 
-Thank you for joining the Clood revolution! 🚀 Remember, we're in alpha, so your feedback is golden 🏅. Help us make Clood
-even more awesome!
 
-Now go forth and code with the power of Clood! ⚡🖥️⚡
+## Disclaimer
+
+This application interacts with your codebase and version control system. While it's designed to be safe and non-destructive, always ensure you have backups of your important data before running automated scripts on your codebase.
+
+## Acknowledgments
+
+Clood was heavily written by Claude AI under human supervision. While it serves as a proof of concept, a thorough review is recommended before using it in production environments.
