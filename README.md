@@ -1,157 +1,120 @@
- 
- 
-# Clood: Claude AI-Powered Code Modification Tool
+# Clood
 
-## Introduction
-
-Clood is a powerful tool that combines the capabilities of Anthropic's Claude AI with Git version control. This application allows developers to leverage Claude's AI to suggest and implement changes to their codebase, all while maintaining version control best practices. Clood now offers both a command-line interface and a server mode for integration with other tools or workflows.
-
-## Features
-
-- Integrates Anthropic's Claude AI for code suggestions and modifications
-- Supports both command-line and server modes
-- Automatically creates new Git branches for AI-suggested changes
-- Checks for uncommitted changes before running to ensure a clean working state
-- Offers options to commit, abandon, or proceed with caution when uncommitted changes are present
-- Applies AI-suggested changes to maintain code integrity
-- Provides options to review, keep, or discard AI-suggested changes
-- Handles merging of approved changes back into the original branch
-- Supports custom system prompts for tailored AI behavior
-- Allows specifying Git path and root directory
-- Offers a version command to check the current Clood version
-- Implements a robust API for server mode operations
-- Supports creating, updating, and deleting files within the Git repository
-- Implements retry logic for handling API overload errors
-- Provides detailed error messages and logging
+Clood is a tool that integrates Claude AI with your local development environment, allowing you to make AI-assisted changes to your codebase.
 
 ## Prerequisites
 
-- .NET 6.0 or later
-- Git installed and configured on your system
-- An Anthropic API key for Claude AI
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
 
-## Setup
+If you don't have .NET installed, visit the link above and follow the installation instructions for your operating system.
+
+## Building Clood for Release
 
 1. Clone the repository:
- 
-
-2. Install the required NuGet packages:
    ```
-dotnet restore
+   git clone https://github.com/atomicwrite/Clood.git
+   cd Clood
    ```
 
-3. Set up your Anthropic API key as a user secret:
+2. Build the project for release:
    ```
-dotnet user-secrets set "clood-key" "your-api-key-here"
-   ```
-3a. You can optionall
-
-## Usage
-
-### Command-line Mode
-
-1. Navigate to your project directory where you want to use Clood.
-
-2. Run Clood with the desired options:
-   ```
-dotnet run -- [options] <files>
+   dotnet publish -c Release
    ```
 
-   Options:
-   - `-m, --server`: Start Clood in server mode
-   - `-u, --server-urls`: Specify URLs for the server to listen on (e.g., "http://localhost:5000")
-   - `-v, --version`: Print the Clood version and exit
-   - `-g, --git-path`: Specify the path to the Git executable
-   - `-r, --git-root`: Specify the Git root directory (required)
-   - `-p, --prompt`: Provide a prompt for Claude AI
-   - `-s, --system-prompt`: Specify a file containing a system prompt for Claude AI
+The release build will be available in the `bin/Release/net8.0/publish` directory.
 
-   Example:
+## Adding a .NET Secret (Optional)
+
+To securely store your API key, you can use .NET's secret manager:
+
+1. Initialize the user secrets for the project:
    ```
-dotnet run -- -r /path/to/git/repo -p "Refactor this code for better performance" file1.cs file2.cs
+   dotnet user-secrets init
    ```
 
-3. Follow the prompts to review and apply changes.
-
-### Server Mode
-
-1. Start Clood in server mode:
+2. Add your API key:
    ```
-dotnet run -- -m -u http://localhost:5000 dummyfile
+   dotnet user-secrets set "clood-key" "your-api-key-here"
    ```
 
-2. Use the following API endpoints:
+Note: You can skip this step for now and use an environment variable instead (see below), but this method will be phased out in future versions.
 
-   - `POST /api/clood/start`
-     - Request body: `CloodRequest` object
-     - Response: `CloodResponse<CloodStartResponse>` object
+## Setting up the API Key
 
-   - `POST /api/clood/merge`
-     - Request body: `MergeRequest` object
-     - Response: `CloodResponse<string>` object
+For now, you can set the API key as an environment variable:
 
-   - `POST /api/clood/revert`
-     - Request body: Session ID (string)
-     - Response: `CloodResponse<string>` object
+- On Windows (Command Prompt):
+  ```
+  set clood-key=your-api-key-here
+  ```
 
-   Example of a `CloodRequest` object:
-   ```json
-   {
-     "prompt": "Refactor this code for better performance",
-     "systemPrompt": "Act as an experienced software engineer",
-     "files": ["file1.cs", "file2.cs"],
-     "gitRoot": "/path/to/git/repo",
-     "useGit": true
-   }
+- On macOS/Linux:
+  ```
+  export clood-key=your-api-key-here
+  ```
+
+Remember to replace `your-api-key-here` with your actual API key.
+
+## Starting the Server
+
+To start the Clood server:
+
+1. Navigate to the publish directory:
+   ```
+   cd bin/Release/net8.0/publish
    ```
 
-Example of a `CloodResponse` object:
-   ```json
-   {
-     "success": true,
-     "errorMessage": null,
-     "data": {
-       "id": "session-guid",
-       "newBranch": "Modifications-file1-file2",
-       "proposedChanges": {
-         "changedFiles": [
-           {"filename": "file1.cs", "content": "..."},
-           {"filename": "file2.cs", "content": "..."}
-         ],
-         "newFiles": []
-       }
-     }
-   }
+2. Run the server:
+   ```
+   dotnet Clood.dll -m -r /path/to/your/git/repo server
    ```
 
-## How It Works
+Replace `/path/to/your/git/repo` with the actual path to your Git repository.
 
-1. Clood checks for any uncommitted changes in your working directory.
-2. It sends your specified files and prompt to Claude AI.
-3. Claude analyzes the files and suggests changes.
-4. Clood creates a new Git branch and applies Claude's suggestions.
-5. You can review the changes and decide whether to keep or discard them.
-6. If you choose to keep the changes, they can be merged back into your original branch.
+Note: The `server` keyword at the end is required to start Clood in server mode.
 
-## Error Handling
+## Clood Options
 
-- Clood implements retry logic for handling API overload errors.
-- Detailed error messages are provided for various scenarios, including Git operations, file access, and API communication.
-- In server mode, error responses include a `success` flag and an `errorMessage` field for easy error handling by clients.
+Clood supports various command-line options:
 
-## Contributing
+- `-m` or `--server`: Start Clood in server mode.
+- `-u` or `--server-urls`: Specify the URLs for the minimal API to run on.
+- `-v` or `--version`: Print the version of Clood and exit.
+- `-g` or `--git-path`: Specify an optional path to the Git executable.
+- `-r` or `--git-root`: Specify the Git root directory (required).
+- `-p` or `--prompt`: Provide a prompt for Claude AI.
+- `-s` or `--system-prompt`: Specify a file containing a system prompt for Claude AI.
+- Files: You can list files to process after the options.
 
-Contributions to improve Clood are welcome! Please feel free to submit pull requests or open issues to suggest improvements or report bugs.
+Example usage:
+```
+dotnet Clood.dll -m -r /path/to/repo -u http://localhost:5000 server
+```
 
-## License
+This starts the server on `http://localhost:5000` with the Git root set to `/path/to/repo`.
 
-GPL
+## Executable Path
 
+After building, the Clood executable will be located at:
 
-## Disclaimer
+```
+bin/Release/net8.0/publish/Clood.dll
+```
 
-This application interacts with your codebase and version control system. While it's designed to be safe and non-destructive, always ensure you have backups of your important data before running automated scripts on your codebase.
+You can run this directly with the `dotnet` command as shown in the "Starting the Server" section.
 
-## Acknowledgments
+## Releases
 
-Clood was heavily written by Claude AI under human supervision. While it serves as a proof of concept, a thorough review is recommended before using it in production environments.
+We provide pre-built releases for easier installation. Check out our [Releases page](https://github.com/atomicwrite/Clood/releases) to download the latest version.
+
+To use a release:
+
+1. Download the release for your platform
+2. Extract the contents
+3. Run the executable as described in the "Starting the Server" section
+
+## Getting Help
+
+If you encounter any issues or have questions, please open an issue on our GitHub repository at https://github.com/atomicwrite/Clood.
+
+Happy coding with Clood!
