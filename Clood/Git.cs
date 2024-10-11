@@ -1,33 +1,54 @@
-﻿using CliWrap;
+using System.Text.RegularExpressions;
+using CliWrap;
 using CliWrap.Buffered;
+using Serilog;
 
 namespace Clood;
 
-public static class Git
+public static partial class Git
 {
     public static string PathToGit { get; set; } = "git";
+
     public static async Task<string> GetCurrentBranch(string workingDirectory)
     {
-        var result = await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments("rev-parse --abbrev-ref HEAD")
-            .ExecuteBufferedAsync();
-        return result.StandardOutput.Trim();
+        try
+        {
+            var result = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("rev-parse --abbrev-ref HEAD")
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
+
+            if (result.ExitCode != 0)
+            {
+                throw new Exception($"Could not get current branch: {result.StandardOutput} {result.StandardError}");
+            }
+
+            return result.StandardOutput.Trim();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error getting current branch");
+            throw;
+        }
     }
 
     public static async Task<string> CreateNewBranch(string workingDirectory, List<string> files)
     {
         var filesList = string.Join(",", files.Select(Path.GetFileName).Take(4));
-        var baseBranchName = $"Modifications-{filesList}";
-    
-        // Remove invalid characters and truncate if necessary
-        baseBranchName = new string(baseBranchName.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_').ToArray());
-        if (baseBranchName.Length > 50)
+        var cleanBranchRegex = CleanBranchRegex();
+        var baseBranchName = cleanBranchRegex.Replace($"Clood-{filesList}", "");
+        if (filesList.Length == 0)
         {
-            baseBranchName = baseBranchName.Substring(0, 47) + "...";
+            baseBranchName = cleanBranchRegex.Replace($"Clood-empty", "");
         }
 
-        var branchName = baseBranchName;
+        if (baseBranchName.Length > 15)
+        {
+            baseBranchName = baseBranchName[..15];
+        }
+
+        var branchName = baseBranchName.Trim('-');
         var counter = 1;
 
         while (await BranchExists(workingDirectory, branchName))
@@ -36,13 +57,26 @@ public static class Git
             counter++;
         }
 
-        
-        await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments($"checkout -b {branchName}")
-            .ExecuteAsync();
-
-        Console.WriteLine($"Created and switched to new branch: {branchName}");
+        BufferedCommandResult result;
+        try
+        {
+          result = await Cli.Wrap(PathToGit)
+              .WithValidation(CommandResultValidation.None)
+              .WithWorkingDirectory(workingDirectory)
+              .WithArguments($"checkout -b {branchName}")
+              .ExecuteBufferedAsync();
+          if (result.ExitCode != 0)
+          {
+              throw new Exception($"Could not switch branches: {result.StandardOutput} {result.StandardError}");
+          }
+         
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Error creating new branch");
+            throw;
+        }
+        Log.Information($"Created and switched to new branch: {branchName}");
         return branchName;
     }
 
@@ -53,11 +87,13 @@ public static class Git
             var result = await Cli.Wrap(PathToGit)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"rev-parse --verify {branchName}")
+                .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync();
-            return true;
+            return result.ExitCode == 0;
         }
-        catch
+        catch (Exception ex)
         {
+            Log.Warning(ex, $"Error checking if branch {branchName} exists");
             return false;
         }
     }
@@ -66,43 +102,51 @@ public static class Git
     {
         try
         {
-            // Add each file individually
             foreach (var file in files)
             {
                 var addResult = await Cli.Wrap(PathToGit)
                     .WithWorkingDirectory(workingDirectory)
                     .WithArguments($"add \"{file}\"")
+                    .WithValidation(CommandResultValidation.None)
                     .ExecuteBufferedAsync();
-                
-                Console.WriteLine($"Git add output for {file}: {addResult.StandardOutput}");
-                Console.WriteLine($"Git add error for {file} (if any): {addResult.StandardError}");
+
+                if (addResult.ExitCode != 0)
+                {
+                    Log.Warning($"Git add failed for {file}: {addResult.StandardError}{addResult.StandardError}");
+                }
+                else
+                {
+                    Log.Information($"Git add successful for {file}");
+                }
             }
 
-            // Check for changes after adding
             var afterStatus = await GetGitStatus(workingDirectory);
-            Console.WriteLine($"Status after adding specific files: {afterStatus}");
+            Log.Information($"Status after adding specific files: {afterStatus}");
 
             if (string.IsNullOrWhiteSpace(afterStatus))
             {
-                Console.WriteLine("No changes to commit after adding specific files.");
+                Log.Information("No changes to commit after adding specific files.");
                 return false;
             }
 
-            // Commit the changes
             var commitResult = await Cli.Wrap(PathToGit)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"commit -m \"{message}\"")
+                .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync();
 
-            Console.WriteLine($"Git commit output: {commitResult.StandardOutput}");
-            Console.WriteLine($"Git commit error (if any): {commitResult.StandardError}");
+            if (commitResult.ExitCode != 0)
+            {
+                Log.Error($"Git commit failed: {commitResult.StandardError}");
+                return false;
+            }
 
-            Console.WriteLine("Specific files added and committed successfully.");
+            Log.Information("Specific files added and committed successfully.");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error during commit process for specific files: {ex.Message}");
+            Log.Error(ex, "Error during commit process for specific files");
             return false;
         }
     }
@@ -112,44 +156,70 @@ public static class Git
         var result = await Cli.Wrap(PathToGit)
             .WithWorkingDirectory(workingDirectory)
             .WithArguments("status --porcelain")
+            .WithValidation(CommandResultValidation.None)
             .ExecuteBufferedAsync();
+
+        if (result.ExitCode != 0)
+        {
+            Log.Warning($"Git status failed: {result.StandardError}");
+            return string.Empty;
+        }
 
         return result.StandardOutput.Trim();
     }
+
     public static async Task<bool> CommitChanges(string workingDirectory, string message)
     {
         try
         {
-            // First, check if there are any changes to commit
             var statusResult = await Cli.Wrap(PathToGit)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments("status --porcelain")
+                .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync();
 
-            if (string.IsNullOrWhiteSpace(statusResult.StandardOutput))
+            if (statusResult.ExitCode != 0)
             {
-                Console.WriteLine("No changes to commit.");
+                Log.Warning($"Git status failed: {statusResult.StandardError}");
                 return false;
             }
 
-            // Add all changes
-            await Cli.Wrap(PathToGit)
+            if (string.IsNullOrWhiteSpace(statusResult.StandardOutput))
+            {
+                Log.Information("No changes to commit.");
+                return false;
+            }
+
+            var addResult = await Cli.Wrap(PathToGit)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments("add .")
-                .ExecuteAsync();
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
 
-            // Commit the changes
-            await Cli.Wrap(PathToGit)
+            if (addResult.ExitCode != 0)
+            {
+                Log.Error($"Git add failed: {addResult.StandardError}");
+                return false;
+            }
+
+            var commitResult = await Cli.Wrap(PathToGit)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"commit -m \"{message}\"")
-                .ExecuteAsync();
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
 
-            Console.WriteLine("Changes added and committed successfully.");
+            if (commitResult.ExitCode != 0)
+            {
+                Log.Error($"Git commit failed: {commitResult.StandardError}");
+                return false;
+            }
+
+            Log.Information("Changes added and committed successfully.");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error during commit process: {ex.Message}");
+            Log.Error(ex, "Error during commit process");
             return false;
         }
     }
@@ -158,49 +228,127 @@ public static class Git
     {
         try
         {
-            // First, commit changes on the new branch
             var commitSuccess = await CommitChanges(workingDirectory, $"Changes made by Claudia AI on branch {newBranchName}");
-            
+
             if (!commitSuccess)
             {
-                Console.WriteLine("No changes to merge.");
+                Log.Information("No changes to merge.");
                 return false;
             }
 
-            // Switch back to the original branch
             await SwitchToBranch(workingDirectory, currentBranch);
 
-            // Merge the new branch
-            await Cli.Wrap(PathToGit)
+            var mergeResult = await Cli.Wrap(PathToGit)
                 .WithWorkingDirectory(workingDirectory)
                 .WithArguments($"merge {newBranchName}")
-                .ExecuteAsync();
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
 
-            Console.WriteLine($"Merged changes from {newBranchName} into {currentBranch}");
+            if (mergeResult.ExitCode != 0)
+            {
+                Log.Error($"Merge failed: {mergeResult.StandardError}");
+                return false;
+            }
+
+            Log.Information($"Merged changes from {newBranchName} into {currentBranch}");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error during merge process: {ex.Message}");
+            Log.Error(ex, "Error during merge process");
             return false;
         }
     }
 
     public static async Task SwitchToBranch(string workingDirectory, string branchName)
     {
-        await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments($"checkout {branchName}")
-            .ExecuteAsync();
-        Console.WriteLine($"Switched to branch: {branchName}");
+        try
+        {
+            var result = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments($"checkout {branchName}")
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
+
+            if (result.ExitCode != 0)
+            {
+                throw new Exception($"Could not switch to branch {branchName}: {result.StandardError}");
+            }
+
+            Log.Information($"Switched to branch: {branchName}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"Error switching to branch {branchName}");
+            throw;
+        }
+    }
+
+    public static async Task RecheckoutBranchRevert(string workingDirectory)
+    {
+        try
+        {
+            var checkoutResult = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("checkout .")
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
+
+            if (checkoutResult.ExitCode != 0)
+            {
+                Log.Warning($"Re-checkout failed: {checkoutResult.StandardError}");
+            }
+            else
+            {
+                Log.Information($"Re-checked out from {workingDirectory}");
+            }
+
+            var cleanResult = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("clean -fd")
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
+
+            if (cleanResult.ExitCode != 0)
+            {
+                Log.Warning($"Git clean failed: {cleanResult.StandardError}");
+            }
+            else
+            {
+                Log.Information($"Cleaned untracked files and directories: {cleanResult.StandardOutput}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error during RecheckoutBranchRevert");
+        }
     }
 
     public static async Task DeleteBranch(string workingDirectory, string branchName)
     {
-        await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments($"branch -D {branchName}")
-            .ExecuteAsync();
-        Console.WriteLine($"Deleted branch: {branchName}");
+        try
+        {
+            var result = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments($"branch -D {branchName}")
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
+
+            if (result.ExitCode != 0)
+            {
+                Log.Warning($"Failed to delete branch {branchName}: {result.StandardError}");
+            }
+            else
+            {
+                Log.Information($"Deleted branch: {branchName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"Error deleting branch {branchName}");
+        }
     }
+
+    [GeneratedRegex("[^a-zA-Z0-9-_]")]
+    private static partial Regex CleanBranchRegex();
 }

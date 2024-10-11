@@ -1,0 +1,1 @@
+{"files":[],"prompt":"We\u0027re creating a logger in serilog for our project. Initialize it in program.cs.\n\nWe\u0027re using serilog and want to log to file and console. We already have the nuget packages."}
