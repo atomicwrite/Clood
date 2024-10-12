@@ -1,70 +1,58 @@
-using System;
-using NUnit.Framework;
 using CloodKey;
-using CloodKey.Interfaces;
-using NUnit.Framework;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Newtonsoft.Json;
-using System.IO;
 
-namespace CloodTest
+namespace CloodTest;
+
+[TestFixture]
+public class SecretStoreTests
 {
-}
-namespace CloodTest
-{
-    [TestFixture]
-    public class SecretStoreTests
+    private SecretStore _secretStore;
+
+    [SetUp]
+    public void Setup()
     {
-        private SecretStore _secretStore;
+        // Use the currently logged-in username
+        var currentUsername = Environment.UserName;
+        _secretStore = new SecretStore(currentUsername);
+    }
 
-        [SetUp]
-        public void Setup()
-        {
-            // Use the currently logged-in username
-            var currentUsername = Environment.UserName;
-            _secretStore = new SecretStore(currentUsername);
-        }
+    [Test]
+    public async Task TestAddingKey()
+    {
+        // Arrange
+        const string key = "TestKey";
+        const string value = "TestValue";
 
-        [Test]
-        public async Task TestAddingKey()
-        {
-            // Arrange
-            const string key = "TestKey";
-            const string value = "TestValue";
+        // Act
+        await _secretStore.Set(key, value);
 
-            // Act
-            await _secretStore.Set(key, value);
+        // Assert
+        Assert.Pass();
+    }
 
-            // Assert
-           Assert.Pass();
-        }
+    [Test]
+    public async Task TestAddingAndGettingKey()
+    {
+        // Arrange
+        var key = "TestKey2";
+        var value = "TestValue2";
 
-        [Test]
-        public async Task TestAddingAndGettingKey()
-        {
-            // Arrange
-            var key = "TestKey2";
-            var value = "TestValue2";
+        // Act
+        await _secretStore.Set(key, value);
+        var retrievedValue = await _secretStore.Get(key);
 
-            // Act
-            await _secretStore.Set(key, value);
-            var retrievedValue = await _secretStore.Get(key);
+        // Assert
+        Assert.That(retrievedValue, Is.EqualTo(value));
+    }
 
-            // Assert
-            Assert.That(retrievedValue, Is.EqualTo(value));
-        }
+    [Test]
+    public void TestGettingNonExistentKey()
+    {
+        // Arrange
+        const string nonExistentKey = "NonExistentKey";
 
-        [Test]
-        public void TestGettingNonExistentKey()
-        {
-            // Arrange
-            const string nonExistentKey = "NonExistentKey";
+        // Act & Assert
+        async void Code() => await _secretStore.Get(nonExistentKey);
 
-            // Act & Assert
-            async void Code() => await _secretStore.Get(nonExistentKey);
-
-            Assert.Throws<KeyNotFoundException>(Code);
-        }
+        Assert.Throws<KeyNotFoundException>(Code);
     }
 }

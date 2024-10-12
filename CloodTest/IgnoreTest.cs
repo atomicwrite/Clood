@@ -1,14 +1,7 @@
+using Clood.Gits;
+
 namespace CloodTest;
 
-using System;
-using System.Text.RegularExpressions;
-using System.Linq;
-using System.Collections.Generic;
-using NUnit.Framework;
-using System;
-using System.Text.RegularExpressions;
-using System.Linq;
-using System.Collections.Generic;
 using NUnit.Framework;
 
 [TestFixture]

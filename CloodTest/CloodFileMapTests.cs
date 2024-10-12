@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using NUnit.Framework;
-using Clood;
+using Clood.Files;
 
 namespace CloodTest
 {
@@ -60,7 +56,7 @@ namespace CloodTest
             // Arrange
             var file1Path = Path.Combine(_testFolderPath, "file1.txt");
             var ignoredFilePath = Path.Combine(_testFolderPath, "node_modules", "ignored.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(ignoredFilePath));
+            Directory.CreateDirectory(Path.GetDirectoryName(ignoredFilePath)!);
             File.WriteAllText(file1Path, "Test content 1");
             File.WriteAllText(ignoredFilePath, "Ignored content");
 

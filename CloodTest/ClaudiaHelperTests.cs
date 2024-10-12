@@ -1,5 +1,4 @@
- 
-using Clood;
+using Clood.Helpers;
 
 namespace CloodTest
 {
@@ -43,7 +42,7 @@ namespace CloodTest
         
             // Arrange
             const string prompt = "Summerize german politics over the last 100 years";
-            const string systemPrompt = "You are a helpful AI assistant.";
+       
 
             // Act
             var result = await ClaudiaHelper.SendRequestToClaudia(prompt, rootFolder, testFiles);

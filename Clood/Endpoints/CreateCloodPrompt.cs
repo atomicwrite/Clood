@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
-using System.Text;
-using Newtonsoft.Json;
+using Clood.Endpoints.API;
+using Clood.Endpoints.DTO;
+using Clood.Files;
+using Clood.Helpers;
 
 namespace Clood.Endpoints;
 
@@ -14,16 +16,10 @@ public static class CreateCloodPrompt
         var response = new CloodResponse<PromptImprovement>();
 
         try
-        {
-            // Get the folder layout YAML
-
-            var folderLayoutYaml = new CloodFileMap(CloodApi.GitRoot).CreateYamlMap();
-            // Get the file contents
-            var files = request.Files.Select(a => Path.Join(CloodApi.GitRoot, a)).ToList();
-            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
+        { 
 
 
-            // Format the prompt using FormatPromptHelperPrompt
+       
 
 
             Log.Information("Sending formatted prompt to Claude AI");
@@ -53,10 +49,4 @@ public static class CreateCloodPrompt
             return Results.Ok(response);
         }
     }
-}
-
-public class CloodPromptRequest
-{
-    public string Prompt { get; set; } = string.Empty;
-    public List<string> Files { get; set; } = new List<string>();
 }

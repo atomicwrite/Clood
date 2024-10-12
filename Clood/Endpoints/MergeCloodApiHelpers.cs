@@ -1,7 +1,6 @@
 using CliWrap;
 using CliWrap.Buffered;
-using Microsoft.AspNetCore.Http;
-using Serilog;
+using Clood.Gits;
 
 namespace Clood.Endpoints;
 

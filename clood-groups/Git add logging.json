@@ -1,1 +1,1 @@
-{"files":["Clood/CloodApi.cs","Clood/Program.cs"],"prompt":"We\u0027re using serilogger, update CloodApi.cs to use serilogger appropriatealy.\n\n"}
+{"files":["Clood/Endpoints/API/CloodApi.cs","Clood/Program.cs"],"prompt":"We\u0027re using serilogger, update CloodApi.cs to use serilogger appropriatealy.\n\n"}

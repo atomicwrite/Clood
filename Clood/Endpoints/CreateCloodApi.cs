@@ -1,3 +1,10 @@
+using Clood.Endpoints.API;
+using Clood.Endpoints.DTO;
+using Clood.Errors;
+using Clood.Files;
+using Clood.Gits;
+using Clood.Helpers;
+using Clood.Session;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
@@ -28,7 +35,7 @@ public static class CreateCloodApi
         if (request.UseGit)
         {
             Log.Information("Applying changes to Git repository");
-            await Clood.ApplyChanges(session.ProposedChanges, CloodApi.GitRoot);
+            await CreateCloodHelper.ApplyChanges(session.ProposedChanges, CloodApi.GitRoot);
         }
 
         await AddNewSession(request.UseGit, session);
@@ -84,7 +91,7 @@ public static class CreateCloodApi
         if (useGit)
         {
             Log.Information("Git is enabled for this session");
-            var uncommittedChanges = await Clood.GetUncommittedChanges(CloodApi.GitRoot);
+            var uncommittedChanges = await CreateCloodHelper.GetUncommittedChanges(CloodApi.GitRoot);
             if (uncommittedChanges.Count != 0)
             {
                 Log.Warning("Uncommitted changes found in the repository: {UncommittedChanges}",
@@ -122,20 +129,4 @@ public static class CreateCloodApi
         Log.Warning("Claude AI could not answer the question");
         throw new ClaudeCouldNotAnswerException("Claude could not answer the question.");
     }
-}
-
-public class MissingFilesException(string message) : Exception(message)
-{
-}
-
-public class UncommittedFilesException(string message) : Exception(message)
-{
-}
-
-public class SessionException(string message) : Exception(message)
-{
-}
-
-public class ClaudeCouldNotAnswerException(string message) : Exception(message)
-{
 }
