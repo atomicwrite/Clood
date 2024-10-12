@@ -8,18 +8,11 @@ namespace Clood.Endpoints;
 
 public static class MergeCloodApi
 {
-    public static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request)
+    public static async Task<IResult> MergeCloodChanges([FromBody] MergeRequest request, CloodSession session)
     {
         Log.Information("Starting MergeCloodChanges method");
         var response = new CloodResponse<string>();
-
-        if (!CloodApiSessions.TryRemove(request.Id, out var session) || session is null)
-        {
-            Log.Warning("Session not found: {SessionId}", request.Id);
-            response.Success = false;
-            response.ErrorMessage = "Session not found.";
-            return Results.Ok(response);
-        }
+ 
 
 
         if (session is { UseGit: false })

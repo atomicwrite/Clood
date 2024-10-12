@@ -6,17 +6,19 @@ namespace Clood.Endpoints;
 
 public static class DiscardCloodApi
 {
-    public static async Task<IResult> DiscardCloodChanges( DiscardRequest request,
+    public static async Task<IResult> DiscardCloodChanges(DiscardRequest request,
         CloodSession session)
     {
         Log.Information("Starting MergeCloodChanges method");
         var response = new CloodResponse<string>();
-
-        if (session is not { UseGit: false })
-            return await MergeCloodApiHelpers.DiscardChagnes(request, session, response);
-        Log.Information("Session {SessionId} does not use Git. No changes to apply.", request.Id);
+        
+        Log.Information("Discarding changes for session {SessionId}", request.Id);
+        
+        await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
+        await Git.DeleteBranch(session.GitRoot, session.NewBranch);
+        await Git.RecheckoutBranchRevert(session.GitRoot);
         response.Success = true;
-        response.Data = "Session closed. No changes were applied.";
+        response.Data = "Changes discarded.";
         return Results.Ok(response);
     }
 }

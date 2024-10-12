@@ -22,14 +22,5 @@ public static class MergeCloodApiHelpers
         }
     }
 
-    public static async Task<IResult> DiscardChagnes(DiscardRequest request, CloodSession? session, CloodResponse<string> response)
-    {
-        Log.Information("Discarding changes for session {SessionId}", request.Id);
-        await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-        await Git.DeleteBranch(session.GitRoot, session.NewBranch);
-        await Git.RecheckoutBranchRevert(session.GitRoot);
-        response.Success = true;
-        response.Data = "Changes discarded.";
-        return Results.Ok(response);
-    }
+   
 }

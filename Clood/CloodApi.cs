@@ -24,7 +24,7 @@ public static class CloodApi
             catch (Exception e)
             {
                 Log.Error(e, "Error occurred while starting Clood changes");
-                return CloodPromptErrorResponse(e);
+                return CloodApiErrorHandlers.CloodPromptErrorResponse(e);
             }
         });
         app.MapPost("/api/clood/start", async ([FromBody] CloodRequest request) =>
@@ -37,7 +37,7 @@ public static class CloodApi
             catch (Exception e)
             {
                 Log.Error(e, "Error occurred while starting Clood changes");
-                return CloodStartErrorResponse(e);
+                return CloodApiErrorHandlers.CloodStartErrorResponse(e);
             }
         });
 
@@ -48,107 +48,49 @@ public static class CloodApi
                 try
                 {
                     Log.Information("Merging Clood changes for request: {@Request}", request);
-                    return await DiscardCloodApi.DiscardCloodChanges(request, session);
+                    if (session is not { UseGit: false })
+                        return await DiscardCloodApi.DiscardCloodChanges(request, session);
+
+                    var response = new CloodResponse<string>();
+                    Log.Information("Session {SessionId} does not use Git. No changes to apply.", request.Id);
+                    response.Success = true;
+                    response.Data = "Session closed. No changes were applied.";
+                    return Results.Ok(response);
                 }
                 catch (Exception e)
                 {
                     Log.Error(e, "Error occurred while discarding Clood changes");
-                    return CloodDiscardErrorResponse(e);
+                    return CloodApiErrorHandlers.CloodDiscardErrorResponse(e);
                 }
             });
-        app.MapPost("/api/clood/merge", async ([FromBody] MergeRequest request) =>
+        app.MapPost("/api/clood/merge", async ([FromBody] MergeRequest request, [FromSession] CloodSession session) =>
         {
             try
             {
                 Log.Information("Merging Clood changes for request: {@Request}", request);
-                return await MergeCloodApi.MergeCloodChanges(request);
+                return await MergeCloodApi.MergeCloodChanges(request, session);
             }
             catch (Exception e)
             {
                 Log.Error(e, "Error occurred while merging Clood changes");
-                return CloodMergeErrorResponse(e);
+                return CloodApiErrorHandlers.CloodMergeErrorResponse(e);
             }
         });
-        app.MapPost("/api/clood/revert", async ([FromBody] string request) =>
+        app.MapPost("/api/clood/revert", async ([FromSession] CloodSession session) =>
         {
             try
             {
-                Log.Information("Reverting Clood changes for request: {Request}", request);
-                return await RevertCloodApi.RevertCloodChanges(request);
+                Log.Information("Reverting Clood changes for request: {Request}", session);
+                return await RevertCloodApi.RevertCloodChanges(session);
             }
             catch (Exception e)
             {
                 Log.Error(e, "Error occurred while reverting Clood changes");
-                return CloodMergeRevertResponse(e);
+                return CloodApiErrorHandlers.CloodMergeRevertResponse(e);
             }
         });
-       
+
         GitRoot = gitRoot;
         Log.Information("API configured with GitRoot: {GitRoot}", GitRoot);
-    }
-
-    private static IResult CloodMergeRevertResponse(Exception e)
-    {
-        Log.Error(e, "CloodMergeRevertResponse error");
-        return Results.Ok(new CloodResponse<string>()
-        {
-            Data = "",
-            ErrorMessage = e.Message,
-            Success = false
-        });
-    }
-
-    private static IResult CloodPromptErrorResponse(Exception e)
-    {
-        Log.Error(e, "CloodPromptErrorResponse error");
-        return Results.Ok(new CloodResponse<string>()
-        {
-            Data = "",
-            ErrorMessage = e.Message,
-            Success = false
-        });
-    }
-
-    private static IResult CloodDiscardErrorResponse(Exception e)
-    {
-        Log.Error(e, "CloodMergeErrorResponse error");
-        return Results.Ok(new CloodResponse<string>()
-        {
-            Data = "",
-            ErrorMessage = e.Message,
-            Success = false
-        });
-    }
-
-    private static IResult CloodMergeErrorResponse(Exception e)
-    {
-        Log.Error(e, "CloodMergeErrorResponse error");
-        return Results.Ok(new CloodResponse<string>()
-        {
-            Data = "",
-            ErrorMessage = e.Message,
-            Success = false
-        });
-    }
-
-    private static IResult CloodStartErrorResponse(Exception e)
-    {
-        Log.Error(e, "CloodStartErrorResponse error");
-        return Results.Ok(new CloodResponse<CloodStartResponse>()
-        {
-            Data = new CloodStartResponse()
-            {
-                Id = "-1",
-                NewBranch = "",
-                ProposedChanges = new FileChanges()
-                {
-                    Answered = false,
-                    ChangedFiles = [],
-                    NewFiles = [],
-                }
-            },
-            ErrorMessage = e.Message,
-            Success = false
-        });
     }
 }

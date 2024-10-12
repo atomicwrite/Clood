@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using CliWrap;
 using CliWrap.Buffered;
+using CliWrap.Exceptions;
 using Serilog;
 
 namespace Clood;
@@ -19,17 +20,28 @@ public static partial class Git
                 .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync();
 
-            if (result.ExitCode != 0)
-            {
-                throw new Exception($"Could not get current branch: {result.StandardOutput} {result.StandardError}");
-            }
+            if (result.ExitCode == 0) return result.StandardOutput.Trim();
+            var errorMessage = $"Git command failed with exit code {result.ExitCode}. " +
+                               $"Standard output: {result.StandardOutput.Trim()} " +
+                               $"Standard error: {result.StandardError.Trim()}";
+            Log.Error(errorMessage);
+            throw new Exception($"Unable to get current branch: {errorMessage}");
 
             return result.StandardOutput.Trim();
         }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git command: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+            throw new Exception($"Failed to get current branch: {errorMessage}");
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error getting current branch");
-            throw;
+            var errorMessage = $"Unexpected error while getting current branch: {ex.Message}";
+            Log.Error(ex, errorMessage);
+            throw new Exception(errorMessage);
         }
     }
 
@@ -57,27 +69,40 @@ public static partial class Git
             counter++;
         }
 
-        BufferedCommandResult result;
         try
         {
-          result = await Cli.Wrap(PathToGit)
-              .WithValidation(CommandResultValidation.None)
-              .WithWorkingDirectory(workingDirectory)
-              .WithArguments($"checkout -b {branchName}")
-              .ExecuteBufferedAsync();
-          if (result.ExitCode != 0)
-          {
-              throw new Exception($"Could not switch branches: {result.StandardOutput} {result.StandardError}");
-          }
-         
+            var result = await Cli.Wrap(PathToGit)
+                .WithValidation(CommandResultValidation.None)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments($"checkout -b {branchName}")
+                .ExecuteBufferedAsync();
+
+            if (result.ExitCode != 0)
+            {
+                var errorMessage = $"Failed to create new branch. Exit code: {result.ExitCode}. " +
+                                   $"Standard output: {result.StandardOutput.Trim()} " +
+                                   $"Standard error: {result.StandardError.Trim()}";
+                Log.Error(errorMessage);
+                throw new Exception($"Could not create new branch: {errorMessage}");
+            }
+
+            Log.Information($"Created and switched to new branch: {branchName}");
+            return branchName;
         }
-        catch (Exception e)
+        catch (CommandExecutionException ex)
         {
-            Log.Error(e, "Error creating new branch");
-            throw;
+            var errorMessage = $"Error executing git command to create new branch: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+            throw new Exception($"Failed to create new branch: {errorMessage}");
         }
-        Log.Information($"Created and switched to new branch: {branchName}");
-        return branchName;
+        catch (Exception ex)
+        {
+            var errorMessage = $"Unexpected error while creating new branch: {ex.Message}";
+            Log.Error(ex, errorMessage);
+            throw new Exception(errorMessage);
+        }
     }
 
     private static async Task<bool> BranchExists(string workingDirectory, string branchName)
@@ -91,9 +116,14 @@ public static partial class Git
                 .ExecuteBufferedAsync();
             return result.ExitCode == 0;
         }
+        catch (CommandExecutionException ex)
+        {
+            Log.Warning(ex, $"Error checking if branch {branchName} exists: {ex.Message}");
+            return false;
+        }
         catch (Exception ex)
         {
-            Log.Warning(ex, $"Error checking if branch {branchName} exists");
+            Log.Warning(ex, $"Unexpected error checking if branch {branchName} exists: {ex.Message}");
             return false;
         }
     }
@@ -112,7 +142,9 @@ public static partial class Git
 
                 if (addResult.ExitCode != 0)
                 {
-                    Log.Warning($"Git add failed for {file}: {addResult.StandardError}{addResult.StandardError}");
+                    Log.Warning($"Git add failed for {file}. Exit code: {addResult.ExitCode}. " +
+                                $"Standard output: {addResult.StandardOutput.Trim()} " +
+                                $"Standard error: {addResult.StandardError.Trim()}");
                 }
                 else
                 {
@@ -137,54 +169,74 @@ public static partial class Git
 
             if (commitResult.ExitCode != 0)
             {
-                Log.Error($"Git commit failed: {commitResult.StandardError}");
+                var errorMessage = $"Git commit failed. Exit code: {commitResult.ExitCode}. " +
+                                   $"Standard output: {commitResult.StandardOutput.Trim()} " +
+                                   $"Standard error: {commitResult.StandardError.Trim()}";
+                Log.Error(errorMessage);
                 return false;
             }
 
             Log.Information("Specific files added and committed successfully.");
             return true;
         }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git command during commit process: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+            return false;
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error during commit process for specific files");
+            Log.Error(ex, $"Unexpected error during commit process for specific files: {ex.Message}");
             return false;
         }
     }
 
     private static async Task<string> GetGitStatus(string workingDirectory)
     {
-        var result = await Cli.Wrap(PathToGit)
-            .WithWorkingDirectory(workingDirectory)
-            .WithArguments("status --porcelain")
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteBufferedAsync();
-
-        if (result.ExitCode != 0)
+        try
         {
-            Log.Warning($"Git status failed: {result.StandardError}");
+            var result = await Cli.Wrap(PathToGit)
+                .WithWorkingDirectory(workingDirectory)
+                .WithArguments("status --porcelain")
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync();
+
+            if (result.ExitCode != 0)
+            {
+                var errorMessage = $"Git status failed. Exit code: {result.ExitCode}. " +
+                                   $"Standard output: {result.StandardOutput.Trim()} " +
+                                   $"Standard error: {result.StandardError.Trim()}";
+                Log.Warning(errorMessage);
+                return string.Empty;
+            }
+
+            return result.StandardOutput.Trim();
+        }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git status command: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Warning(ex, errorMessage);
             return string.Empty;
         }
-
-        return result.StandardOutput.Trim();
+        catch (Exception ex)
+        {
+            Log.Warning(ex, $"Unexpected error getting git status: {ex.Message}");
+            return string.Empty;
+        }
     }
 
     public static async Task<bool> CommitChanges(string workingDirectory, string message)
     {
         try
         {
-            var statusResult = await Cli.Wrap(PathToGit)
-                .WithWorkingDirectory(workingDirectory)
-                .WithArguments("status --porcelain")
-                .WithValidation(CommandResultValidation.None)
-                .ExecuteBufferedAsync();
+            var statusResult = await GetGitStatus(workingDirectory);
 
-            if (statusResult.ExitCode != 0)
-            {
-                Log.Warning($"Git status failed: {statusResult.StandardError}");
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(statusResult.StandardOutput))
+            if (string.IsNullOrWhiteSpace(statusResult))
             {
                 Log.Information("No changes to commit.");
                 return false;
@@ -198,7 +250,10 @@ public static partial class Git
 
             if (addResult.ExitCode != 0)
             {
-                Log.Error($"Git add failed: {addResult.StandardError}");
+                var errorMessage = $"Git add failed. Exit code: {addResult.ExitCode}. " +
+                                   $"Standard output: {addResult.StandardOutput.Trim()} " +
+                                   $"Standard error: {addResult.StandardError.Trim()}";
+                Log.Error(errorMessage);
                 return false;
             }
 
@@ -210,16 +265,27 @@ public static partial class Git
 
             if (commitResult.ExitCode != 0)
             {
-                Log.Error($"Git commit failed: {commitResult.StandardError}");
+                var errorMessage = $"Git commit failed. Exit code: {commitResult.ExitCode}. " +
+                                   $"Standard output: {commitResult.StandardOutput.Trim()} " +
+                                   $"Standard error: {commitResult.StandardError.Trim()}";
+                Log.Error(errorMessage);
                 return false;
             }
 
             Log.Information("Changes added and committed successfully.");
             return true;
         }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git command during commit process: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+            return false;
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error during commit process");
+            Log.Error(ex, $"Unexpected error during commit process: {ex.Message}");
             return false;
         }
     }
@@ -228,7 +294,8 @@ public static partial class Git
     {
         try
         {
-            var commitSuccess = await CommitChanges(workingDirectory, $"Changes made by Claudia AI on branch {newBranchName}");
+            var commitSuccess =
+                await CommitChanges(workingDirectory, $"Changes made by Claudia AI on branch {newBranchName}");
 
             if (!commitSuccess)
             {
@@ -246,16 +313,27 @@ public static partial class Git
 
             if (mergeResult.ExitCode != 0)
             {
-                Log.Error($"Merge failed: {mergeResult.StandardError}");
+                var errorMessage = $"Merge failed. Exit code: {mergeResult.ExitCode}. " +
+                                   $"Standard output: {mergeResult.StandardOutput.Trim()} " +
+                                   $"Standard error: {mergeResult.StandardError.Trim()}";
+                Log.Error(errorMessage);
                 return false;
             }
 
             Log.Information($"Merged changes from {newBranchName} into {currentBranch}");
             return true;
         }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git command during merge process: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+            return false;
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error during merge process");
+            Log.Error(ex, $"Unexpected error during merge process: {ex.Message}");
             return false;
         }
     }
@@ -272,15 +350,28 @@ public static partial class Git
 
             if (result.ExitCode != 0)
             {
-                throw new Exception($"Could not switch to branch {branchName}: {result.StandardError}");
+                var errorMessage = $"Could not switch to branch {branchName}. Exit code: {result.ExitCode}. " +
+                                   $"Standard output: {result.StandardOutput.Trim()} " +
+                                   $"Standard error: {result.StandardError.Trim()}";
+                Log.Error(errorMessage);
+                throw new Exception(errorMessage);
             }
 
             Log.Information($"Switched to branch: {branchName}");
         }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git command to switch branch: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+            throw new Exception($"Failed to switch to branch {branchName}: {errorMessage}");
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error switching to branch {branchName}");
-            throw;
+            var errorMessage = $"Unexpected error while switching to branch {branchName}: {ex.Message}";
+            Log.Error(ex, errorMessage);
+            throw new Exception(errorMessage);
         }
     }
 
@@ -296,7 +387,10 @@ public static partial class Git
 
             if (checkoutResult.ExitCode != 0)
             {
-                Log.Warning($"Re-checkout failed: {checkoutResult.StandardError}");
+                var errorMessage = $"Re-checkout failed. Exit code: {checkoutResult.ExitCode}. " +
+                                   $"Standard output: {checkoutResult.StandardOutput.Trim()} " +
+                                   $"Standard error: {checkoutResult.StandardError.Trim()}";
+                Log.Warning(errorMessage);
             }
             else
             {
@@ -311,16 +405,26 @@ public static partial class Git
 
             if (cleanResult.ExitCode != 0)
             {
-                Log.Warning($"Git clean failed: {cleanResult.StandardError}");
+                var errorMessage = $"Git clean failed. Exit code: {cleanResult.ExitCode}. " +
+                                   $"Standard output: {cleanResult.StandardOutput.Trim()} " +
+                                   $"Standard error: {cleanResult.StandardError.Trim()}";
+                Log.Warning(errorMessage);
             }
             else
             {
                 Log.Information($"Cleaned untracked files and directories: {cleanResult.StandardOutput}");
             }
         }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git command during RecheckoutBranchRevert: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error during RecheckoutBranchRevert");
+            Log.Error(ex, $"Unexpected error during RecheckoutBranchRevert: {ex.Message}");
         }
     }
 
@@ -336,16 +440,26 @@ public static partial class Git
 
             if (result.ExitCode != 0)
             {
-                Log.Warning($"Failed to delete branch {branchName}: {result.StandardError}");
+                var errorMessage = $"Failed to delete branch {branchName}. Exit code: {result.ExitCode}. " +
+                                   $"Standard output: {result.StandardOutput.Trim()} " +
+                                   $"Standard error: {result.StandardError.Trim()}";
+                Log.Warning(errorMessage);
             }
             else
             {
                 Log.Information($"Deleted branch: {branchName}");
             }
         }
+        catch (CommandExecutionException ex)
+        {
+            var errorMessage = $"Error executing git command to delete branch: {ex.Message}. " +
+                               $"Inner Exception: {ex.InnerException?.Message}. " +
+                               $"Command: {ex.Command}";
+            Log.Error(ex, errorMessage);
+        }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error deleting branch {branchName}");
+            Log.Error(ex, $"Unexpected error while deleting branch {branchName}: {ex.Message}");
         }
     }
 

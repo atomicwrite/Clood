@@ -2,6 +2,7 @@
 
 public class CloodSession
 {
+    public string Id { get; set; }
     public bool UseGit { get; set; }
     public string OriginalBranch { get; set; }
     public string NewBranch { get; set; }

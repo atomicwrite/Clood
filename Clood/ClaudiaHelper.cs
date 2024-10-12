@@ -12,10 +12,31 @@ public static class ClaudiaHelper
 {
     static ClaudiaHelper()
     {
-        SetupApiKey();
+        var config = new ConfigurationBuilder()
+            .AddUserSecrets<Program>()
+            .AddEnvironmentVariables()
+            .Build();
+
+        var apiKey = config["clood-key"];
+
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new Exception("Missing clood-key in user secrets or environment variables.");
+        }
+
+        if (Environment.GetEnvironmentVariable("clood-key") != null)
+        {
+            Log.Warning("Using clood-key from environment variable is unsafe.");
+        }
+
+        Anthropic = new Anthropic
+        {
+            ApiKey = apiKey
+        };
         MaxTokens = 8192;
     }
 
+    private static readonly Anthropic Anthropic;
     private static readonly int MaxTokens;
     private static readonly ILogger Log = Serilog.Log.ForContext<Program>();
 
@@ -23,14 +44,11 @@ public static class ClaudiaHelper
     {
         try
         {
-            var jsonContent = ExtractJsonFromMarkdown(response);
-            if (string.IsNullOrEmpty(jsonContent))
-            {
-                Log.Error("No JSON content found in the response.");
-                return null;
-            }
-
-            return JsonConvert.DeserializeObject<PromptImprovement>(jsonContent);
+            var jsonContent = ClaudiaMarkDownHelper.ExtractJsonFromMarkdown(response);
+            if (!string.IsNullOrEmpty(jsonContent))
+                return JsonConvert.DeserializeObject<PromptImprovement>(jsonContent);
+            Log.Error("No JSON content found in the response.");
+            return null;
         }
         catch (JsonException e)
         {
@@ -48,7 +66,7 @@ public static class ClaudiaHelper
     {
         try
         {
-            var jsonContent = ExtractJsonFromMarkdown(response);
+            var jsonContent = ClaudiaMarkDownHelper.ExtractJsonFromMarkdown(response);
             if (string.IsNullOrEmpty(jsonContent))
             {
                 Log.Error("Claudia2Json: No JSON content found in the response.");
@@ -74,56 +92,6 @@ public static class ClaudiaHelper
         }
     }
 
-    private static Anthropic anthropic;
-
-    private static void SetupApiKey()
-    {
-        var config = new ConfigurationBuilder()
-            .AddUserSecrets<Program>()
-            .AddEnvironmentVariables()
-            .Build();
-
-        var apiKey = config["clood-key"];
-
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            throw new Exception("Missing clood-key in user secrets or environment variables.");
-        }
-
-        if (Environment.GetEnvironmentVariable("clood-key") != null)
-        {
-            Log.Warning("Using clood-key from environment variable is unsafe.");
-        }
-
-        anthropic = new Anthropic
-        {
-            ApiKey = apiKey
-        };
-    }
-
-    private static string ExtractJsonFromMarkdown(string markdown)
-    {
-        var pipeline = new MarkdownPipelineBuilder().Build();
-        var document = Markdown.Parse(markdown, pipeline);
-
-        var codeBlocks = document.Descendants<FencedCodeBlock>();
-        var jsonBlock = codeBlocks.FirstOrDefault(block =>
-            block.Info.Equals("json", StringComparison.OrdinalIgnoreCase));
-
-        if (jsonBlock == null) return string.Empty;
-        return string.Join(Environment.NewLine, jsonBlock.Lines.Lines);
-    }
-
-    private static bool IsOverloadedError(Exception ex)
-    {
-        if (ex is ClaudiaException claudiaEx)
-        {
-            return (int)claudiaEx.Status == 529 && claudiaEx.Name == "overloaded_error";
-        }
-
-        return false;
-    }
-
 
     public static async Task<string?> SendPromptHelpRequestToClaudia(string prompt, string rootFolder)
     {
@@ -132,12 +100,12 @@ public static class ClaudiaHelper
             var yamlMap = new CloodFileMap(rootFolder).CreateYamlMap();
             var instruction = ClaudiaHelperPrompts.FormatPromptHelperPrompt(prompt, yamlMap);
             StringBuilder sb = new StringBuilder();
-            List<MessageResponse> responses = new List<MessageResponse>();
+            List<MessageResponse> responses = [];
             var userMessage = new Message() { Role = Roles.User, Content = [instruction] };
-            var message = await anthropic.Messages.CreateAsync(new()
+            var message = await Anthropic.Messages.CreateAsync(new MessageRequest
             {
                 Model = Models.Claude3_5Sonnet,
-                MaxTokens = 4000,
+                MaxTokens = MaxTokens,
                 Messages = [userMessage],
             });
             responses.Add(message);
@@ -157,51 +125,41 @@ public static class ClaudiaHelper
         }
     }
 
-    public static async Task<string?> SendRequestToClaudia(string prompt, string root_folder, string systemPrompt,
+    public static async Task<string> SendRequestToClaudia(string prompt, string rootFolder,
         List<string> files)
     {
-        try
+        StringBuilder sb = new StringBuilder();
+        var sources = files.Select(f =>
+            new Content(File.ReadAllText(f))).ToArray();
+        var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
+
+        var yamlMap = new CloodFileMap(rootFolder).CreateYamlMap();
+
+        var instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, rootFolder, yamlMap);
+        var userMessage = new Message() { Role = Roles.User, Content = [..sources, instruction, prompt] };
+
+        List<Message> chatMessages = [userMessage];
+        List<MessageResponse> responses = new List<MessageResponse>();
+        var message = await Anthropic.Messages.CreateAsync(new()
         {
-            StringBuilder sb = new StringBuilder();
-            var sources = files.Select(f =>
-                new Content(File.ReadAllText(f))).ToArray();
-            var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
-
-            var yamlMap = new CloodFileMap(root_folder).CreateYamlMap();
-
-            var instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder, yamlMap);
-            var userMessage = new Message() { Role = Roles.User, Content = [..sources, instruction, prompt] };
-
-            List<Message> chatMessages = [userMessage];
-            List<MessageResponse> responses = new List<MessageResponse>();
-            var message = await anthropic.Messages.CreateAsync(new()
-            {
-                Model = Models.Claude3_5Sonnet,
-                MaxTokens = MaxTokens,
-                Messages = chatMessages.ToArray(),
-            });
-            responses.Add(message);
-            sb.Append(message.Content[0].Text);
-            if (message.StopReason == "max_tokens")
-            {
-                await FinishClaudiaMessage(userMessage, sb, responses);
-            }
-
-            responses.Clear(); // in case we need to do something later we store in  list for now
-
-            return sb.ToString();
-        }
-        catch (ClaudiaException ex)
+            Model = Models.Claude3_5Sonnet,
+            MaxTokens = MaxTokens,
+            Messages = chatMessages.ToArray(),
+        });
+        responses.Add(message);
+        sb.Append(message.Content[0].Text);
+        if (message.StopReason == "max_tokens")
         {
-            if (IsOverloadedError(ex))
-            {
-                throw; // This will be caught by RetryOnOverloadedError
-            }
-
-            Log.Error(ex, "Error in SendRequestToClaudia. Error Code: {StatusCode} - {ErrorName}", (int)ex.Status,
-                ex.Name);
-            return null;
+            await FinishClaudiaMessage(userMessage, sb, responses);
         }
+
+        responses.Clear(); // in case we need to do something later we store in  list for now
+        if (string.IsNullOrEmpty(sb.ToString()))
+        {
+            throw new ClaudiaEmptyResponseException("Received invalid response from Claude AI");
+        }
+
+        return sb.ToString();
     }
 
     private static async Task FinishClaudiaMessage(Message userMessage, StringBuilder sb,
@@ -210,7 +168,7 @@ public static class ClaudiaHelper
         await Task.Delay(TimeSpan.FromSeconds(5));
 
 
-        var newMessage = await anthropic.Messages.CreateAsync(new()
+        var newMessage = await Anthropic.Messages.CreateAsync(new()
         {
             Model = Models.Claude3_5Sonnet,
             MaxTokens = MaxTokens,
@@ -225,4 +183,8 @@ public static class ClaudiaHelper
             await FinishClaudiaMessage(userMessage, sb, responses);
         }
     }
+}
+
+public class ClaudiaEmptyResponseException(string message) : Exception(message)
+{
 }

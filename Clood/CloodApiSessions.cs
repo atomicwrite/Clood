@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Serilog;
 
 namespace Clood;
 
@@ -14,5 +15,18 @@ public static class CloodApiSessions
     public static bool TryRemove(string id, out CloodSession? session)
     {
         return Sessions.TryRemove(id, out session);
+    }
+
+    public static CloodSession CreateSession(  bool useGit,   List<string> filesList)
+    {
+        var sessionId = Guid.NewGuid().ToString();
+        Log.Debug("Generated new session ID: {SessionId}", sessionId);
+        return new CloodSession
+        {
+            Id = sessionId,
+            UseGit = useGit,
+            GitRoot =  CloodApi.GitRoot,
+            Files = filesList
+        };
     }
 }

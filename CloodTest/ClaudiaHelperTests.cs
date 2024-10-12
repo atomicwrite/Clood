@@ -46,7 +46,7 @@ namespace CloodTest
             const string systemPrompt = "You are a helpful AI assistant.";
 
             // Act
-            var result = await ClaudiaHelper.SendRequestToClaudia(prompt, rootFolder, systemPrompt, testFiles);
+            var result = await ClaudiaHelper.SendRequestToClaudia(prompt, rootFolder, testFiles);
 
             // Assert
             Assert.That(result, Is.Not.Null);
