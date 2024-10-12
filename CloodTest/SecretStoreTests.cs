@@ -22,7 +22,7 @@ namespace CloodTest
         public void Setup()
         {
             // Use the currently logged-in username
-            string currentUsername = Environment.UserName;
+            var currentUsername = Environment.UserName;
             _secretStore = new SecretStore(currentUsername);
         }
 
@@ -30,11 +30,11 @@ namespace CloodTest
         public async Task TestAddingKey()
         {
             // Arrange
-            string key = "TestKey";
-            string value = "TestValue";
+            const string key = "TestKey";
+            const string value = "TestValue";
 
             // Act
-            _secretStore.Set(key, value);
+            await _secretStore.Set(key, value);
 
             // Assert
            Assert.Pass();
@@ -44,12 +44,12 @@ namespace CloodTest
         public async Task TestAddingAndGettingKey()
         {
             // Arrange
-            string key = "TestKey2";
-            string value = "TestValue2";
+            var key = "TestKey2";
+            var value = "TestValue2";
 
             // Act
-            _secretStore.Set(key, value);
-            string retrievedValue = await _secretStore.Get(key);
+            await _secretStore.Set(key, value);
+            var retrievedValue = await _secretStore.Get(key);
 
             // Assert
             Assert.That(retrievedValue, Is.EqualTo(value));
@@ -59,10 +59,12 @@ namespace CloodTest
         public void TestGettingNonExistentKey()
         {
             // Arrange
-            string nonExistentKey = "NonExistentKey";
+            const string nonExistentKey = "NonExistentKey";
 
             // Act & Assert
-            Assert.Throws<KeyNotFoundException>(async () => await _secretStore.Get(nonExistentKey));
+            async void Code() => await _secretStore.Get(nonExistentKey);
+
+            Assert.Throws<KeyNotFoundException>(Code);
         }
     }
 }

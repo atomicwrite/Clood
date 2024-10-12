@@ -14,8 +14,6 @@ public static class CloodApi
 
     public static void ConfigureApi(WebApplication app, string gitRoot)
     {
-        
-        
         app.MapPost("/api/clood/prompt", async ([FromBody] CloodPromptRequest request) =>
         {
             try
@@ -42,6 +40,22 @@ public static class CloodApi
                 return CloodStartErrorResponse(e);
             }
         });
+
+
+        app.MapPost("/api/clood/discard",
+            async ([FromBody] DiscardRequest request, [FromSession] CloodSession session) =>
+            {
+                try
+                {
+                    Log.Information("Merging Clood changes for request: {@Request}", request);
+                    return await DiscardCloodApi.DiscardCloodChanges(request, session);
+                }
+                catch (Exception e)
+                {
+                    Log.Error(e, "Error occurred while discarding Clood changes");
+                    return CloodDiscardErrorResponse(e);
+                }
+            });
         app.MapPost("/api/clood/merge", async ([FromBody] MergeRequest request) =>
         {
             try
@@ -68,7 +82,7 @@ public static class CloodApi
                 return CloodMergeRevertResponse(e);
             }
         });
- 
+       
         GitRoot = gitRoot;
         Log.Information("API configured with GitRoot: {GitRoot}", GitRoot);
     }
@@ -83,9 +97,21 @@ public static class CloodApi
             Success = false
         });
     }
+
     private static IResult CloodPromptErrorResponse(Exception e)
     {
         Log.Error(e, "CloodPromptErrorResponse error");
+        return Results.Ok(new CloodResponse<string>()
+        {
+            Data = "",
+            ErrorMessage = e.Message,
+            Success = false
+        });
+    }
+
+    private static IResult CloodDiscardErrorResponse(Exception e)
+    {
+        Log.Error(e, "CloodMergeErrorResponse error");
         return Results.Ok(new CloodResponse<string>()
         {
             Data = "",

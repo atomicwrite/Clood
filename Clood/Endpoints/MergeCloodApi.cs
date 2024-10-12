@@ -13,7 +13,7 @@ public static class MergeCloodApi
         Log.Information("Starting MergeCloodChanges method");
         var response = new CloodResponse<string>();
 
-        if (!CloodApiSessions.TryRemove(request.Id, out var session))
+        if (!CloodApiSessions.TryRemove(request.Id, out var session) || session is null)
         {
             Log.Warning("Session not found: {SessionId}", request.Id);
             response.Success = false;
@@ -21,7 +21,8 @@ public static class MergeCloodApi
             return Results.Ok(response);
         }
 
-        if (!session.UseGit)
+
+        if (session is { UseGit: false })
         {
             Log.Information("Session {SessionId} does not use Git. No changes to apply.", request.Id);
             response.Success = true;
@@ -31,23 +32,14 @@ public static class MergeCloodApi
 
         try
         {
-            if (!request.Merge)
-            {
-                Log.Information("Discarding changes for session {SessionId}", request.Id);
-                await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-                await Git.DeleteBranch(session.GitRoot, session.NewBranch);
-                await Git.RecheckoutBranchRevert(session.GitRoot);
-                response.Success = true;
-                response.Data = "Changes discarded.";
-                return Results.Ok(response);
-            }
-
             Log.Information("Committing changes for session {SessionId}", request.Id);
+            var newBranch = session.NewBranch;
+            var gitRoot = session.GitRoot;
             var commitSuccess = await Git.CommitSpecificFiles(
-                session.GitRoot,
+                gitRoot,
                 (session.ProposedChanges.ChangedFiles ?? []).Select(f => f.Filename)
-                    .Concat((session.ProposedChanges.NewFiles ?? []).Select(f => f.Filename)).ToList(),
-                $"Changes made by Claudia AI on branch {session.NewBranch}"
+                .Concat((session.ProposedChanges.NewFiles ?? []).Select(f => f.Filename)).ToList(),
+                $"Changes made by Claudia AI on branch {newBranch}"
             );
 
             if (!commitSuccess)
@@ -58,18 +50,10 @@ public static class MergeCloodApi
                 return Results.Ok(response);
             }
 
+            var sessionOriginalBranch = session.OriginalBranch;
             Log.Information("Switching to original branch and merging changes for session {SessionId}", request.Id);
-            await Git.SwitchToBranch(session.GitRoot, session.OriginalBranch);
-            var result = await Cli.Wrap(Git.PathToGit)
-                .WithWorkingDirectory(session.GitRoot)
-                .WithValidation(CommandResultValidation.None)
-                .WithArguments($"merge {session.NewBranch}")
-                .ExecuteBufferedAsync();
 
-            if (result.ExitCode != 0)
-            {
-                throw new Exception($"Could not merge {result.StandardOutput} {result.StandardError}");
-            }
+            await MergeCloodApiHelpers.MergeChanges(gitRoot, sessionOriginalBranch, newBranch);
             Log.Information("Successfully merged changes for session {SessionId}", request.Id);
             response.Success = true;
             response.Data = "Changes merged successfully.";
