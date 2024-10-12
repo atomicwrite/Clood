@@ -1,13 +1,22 @@
-﻿using Markdig;
+﻿using System.Text;
+using Markdig;
 using Markdig.Syntax;
 using Newtonsoft.Json;
 using Claudia;
 using Microsoft.Extensions.Configuration;
+using Serilog;
 
 namespace Clood;
 
 public static class ClaudiaHelper
 {
+    static ClaudiaHelper()
+    {
+        SetupApiKey();
+    }
+
+    private static readonly ILogger Log = Serilog.Log.ForContext<Program>();
+
     public static PromptImprovement? ClaudiaPrompt2Json(string response)
     {
         try
@@ -15,7 +24,7 @@ public static class ClaudiaHelper
             var jsonContent = ExtractJsonFromMarkdown(response);
             if (string.IsNullOrEmpty(jsonContent))
             {
-                Console.WriteLine("Error: No JSON content found in the response.");
+                Log.Error("No JSON content found in the response.");
                 return null;
             }
 
@@ -23,12 +32,12 @@ public static class ClaudiaHelper
         }
         catch (JsonException e)
         {
-            Console.WriteLine($"JSON parsing ClaudiaPrompt2Json error: {e.Message}");
+            Log.Error(e, "JSON parsing ClaudiaPrompt2Json error");
             return null;
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Unexpected  ClaudiaPrompt2Json error: {e.Message}");
+            Log.Error(e, "Unexpected ClaudiaPrompt2Json error");
             return null;
         }
     }
@@ -40,7 +49,7 @@ public static class ClaudiaHelper
             var jsonContent = ExtractJsonFromMarkdown(response);
             if (string.IsNullOrEmpty(jsonContent))
             {
-                Console.WriteLine("Error: Claudia2Json No JSON content found in the response.");
+                Log.Error("Claudia2Json: No JSON content found in the response.");
                 return null;
             }
 
@@ -48,25 +57,24 @@ public static class ClaudiaHelper
             if (fileChanges == null)
                 return fileChanges;
             fileChanges.ChangedFiles ??= [];
-
             fileChanges.NewFiles ??= [];
             return fileChanges;
         }
         catch (JsonException e)
         {
-            Console.WriteLine($"JSON Claudia2Json parsing error: {e.Message}");
+            Log.Error(e, "JSON Claudia2Json parsing error");
             return null;
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Unexpected Claudia2Json error: {e.Message}");
+            Log.Error(e, "Unexpected Claudia2Json error");
             return null;
         }
     }
 
     private static Anthropic anthropic;
 
-    public static void SetupApiKey()
+    private static void SetupApiKey()
     {
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>()
@@ -82,7 +90,7 @@ public static class ClaudiaHelper
 
         if (Environment.GetEnvironmentVariable("clood-key") != null)
         {
-            Console.WriteLine("Warning: Using clood-key from environment variable is unsafe.");
+            Log.Warning("Using clood-key from environment variable is unsafe.");
         }
 
         anthropic = new Anthropic
@@ -127,8 +135,9 @@ public static class ClaudiaHelper
             {
                 if (IsOverloadedError(ex))
                 {
-                    Console.WriteLine(
-                        $"Overloaded error detected. Retrying in {delayMs}ms... (Attempt {i + 1}/{maxRetries})");
+                    Log.Warning(
+                        "Overloaded error detected. Retrying in {DelayMs}ms... (Attempt {Attempt}/{MaxRetries})",
+                        delayMs, i + 1, maxRetries);
                     await Task.Delay(delayMs);
                     delayMs *= 2; // Exponential backoff
                 }
@@ -141,27 +150,21 @@ public static class ClaudiaHelper
 
         throw new Exception($"Failed after {maxRetries} attempts due to overloaded errors.");
     }
-    public static async Task<string?> SendPromptHelpRequestToClaudia(string prompt, string root_folder )
+
+    public static async Task<string?> SendPromptHelpRequestToClaudia(string prompt, string root_folder)
     {
         return await RetryOnOverloadedError(async () =>
         {
             try
             {
-           
-              
-
                 var yamlMap = new CloodFileMap(root_folder).CreateYamlMap();
-                var instruction = ClaudiaHelperPrompts.FormatPromptHelperPrompt(
-              
-                    prompt,
-                    yamlMap
-                );
-           
+                var instruction = ClaudiaHelperPrompts.FormatPromptHelperPrompt(prompt, yamlMap);
+
                 var message = await anthropic.Messages.CreateAsync(new()
                 {
                     Model = Models.Claude3_5Sonnet,
                     MaxTokens = 4000,
-                    Messages = [new() { Role = Roles.User, Content = [  instruction ] }],
+                    Messages = [new() { Role = Roles.User, Content = [instruction] }],
                 });
 
                 return message.Content[0].Text;
@@ -173,12 +176,13 @@ public static class ClaudiaHelper
                     throw; // This will be caught by RetryOnOverloadedError
                 }
 
-                Console.WriteLine($"Error: {ex.Message}");
-                Console.WriteLine($"Error Code: {(int)ex.Status} - {ex.Name}");
+                Log.Error(ex, "Error in SendPromptHelpRequestToClaudia. Error Code: {StatusCode} - {ErrorName}",
+                    (int)ex.Status, ex.Name);
                 return null;
             }
         });
     }
+
     public static async Task<string?> SendRequestToClaudia(string prompt, string root_folder, string systemPrompt,
         List<string> files)
     {
@@ -186,22 +190,47 @@ public static class ClaudiaHelper
         {
             try
             {
+                StringBuilder sb = new StringBuilder();
                 var sources = files.Select(f =>
-                    new Content(File.ReadAllText(f)));
+                    new Content(File.ReadAllText(f))).ToArray();
                 var filesDict = JsonConvert.SerializeObject(files.ToDictionary(a => a, File.ReadAllText));
 
                 var yamlMap = new CloodFileMap(root_folder).CreateYamlMap();
-           
-                var instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder, yamlMap);
 
+                var instruction = ClaudiaHelperPrompts.FormatCodeHelperPrompt(filesDict, prompt, root_folder, yamlMap);
+                var userMessage = new Message() { Role = Roles.User, Content = [..sources, instruction, prompt] };
+                List<Message> chatMessages = [userMessage];
+                List<MessageResponse> responses = new List<MessageResponse>();
                 var message = await anthropic.Messages.CreateAsync(new()
                 {
                     Model = Models.Claude3_5Sonnet,
-                    MaxTokens = 4000,
-                    Messages = [new() { Role = Roles.User, Content = [..sources, instruction, prompt] }],
+                    MaxTokens = 8192,
+                    Messages = chatMessages.ToArray(),
                 });
+                responses.Add(message);
+                sb.Append(message.Content[0].Text);
+                while (message.StopReason == "max_tokens")
+                {
+                    Thread.Sleep(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        message = await anthropic.Messages.CreateAsync(new()
+                        {
+                            Model = Models.Claude3_5Sonnet,
+                            MaxTokens = 8192,
+                            Messages = [userMessage, new Message() { Role = Roles.Assistant, Content = sb.ToString() }]
+                        });
+                        sb.Append(message.Content[0].Text);
+                        responses.Add(message);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
+                    }
+                }
 
-                return message.Content[0].Text;
+                return sb.ToString();
             }
             catch (ClaudiaException ex)
             {
@@ -210,8 +239,8 @@ public static class ClaudiaHelper
                     throw; // This will be caught by RetryOnOverloadedError
                 }
 
-                Console.WriteLine($"Error: {ex.Message}");
-                Console.WriteLine($"Error Code: {(int)ex.Status} - {ex.Name}");
+                Log.Error(ex, "Error in SendRequestToClaudia. Error Code: {StatusCode} - {ErrorName}", (int)ex.Status,
+                    ex.Name);
                 return null;
             }
         });

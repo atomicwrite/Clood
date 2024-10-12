@@ -21,7 +21,7 @@ public static class Clood
             return;
         }
 
-        ClaudiaHelper.SetupApiKey();
+       
         if (opts.Server)
         {
             CloodServer.Start(opts.Urls, opts.GitRoot);

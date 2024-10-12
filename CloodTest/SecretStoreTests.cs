@@ -2,7 +2,15 @@ using System;
 using NUnit.Framework;
 using CloodKey;
 using CloodKey.Interfaces;
+using NUnit.Framework;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using System.IO;
 
+namespace CloodTest
+{
+}
 namespace CloodTest
 {
     [TestFixture]

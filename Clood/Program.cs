@@ -1,6 +1,6 @@
 using CommandLine;
 using Serilog;
-
+ 
 namespace Clood;
 
 internal class Program
@@ -8,11 +8,7 @@ internal class Program
     private static async Task Main(string[] args)
     {
         // Configure and initialize Serilog
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .WriteTo.File("logs/clood-.log", rollingInterval: RollingInterval.Day)
-            .CreateLogger();
+        LogConfig.ConfigureLogging();
 
         try
         {
