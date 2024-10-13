@@ -43,10 +43,14 @@ public static class CloodApi
 
 
         app.MapPost("/api/clood/discard",
-            async ([FromBody] DiscardRequest request, [FromSession] CloodSession session) =>
+            async ([FromBody] DiscardRequest request ) =>
             {
                 try
                 {
+                    if (!CloodApiSessions.TryRemove(request.Id, out var session) || session == null)
+                    {
+                        throw new SessionException("Could not find Session");
+                    }
                     Log.Information("Merging Clood changes for request: {@Request}", request);
                     if (session is not { UseGit: false })
                         return await DiscardCloodApi.DiscardCloodChanges(request, session);
@@ -63,10 +67,14 @@ public static class CloodApi
                     return CloodApiErrorHandlers.CloodDiscardErrorResponse(e);
                 }
             });
-        app.MapPost("/api/clood/merge", async ([FromBody] MergeRequest request, [FromSession] CloodSession session) =>
+        app.MapPost("/api/clood/merge", async ([FromBody] MergeRequest request) =>
         {
             try
             {
+                if (!CloodApiSessions.TryRemove(request.Id, out var session) || session == null)
+                {
+                    throw new SessionException("Could not find Session");
+                }
                 Log.Information("Merging Clood changes for request: {@Request}", request);
                 return await MergeCloodApi.MergeCloodChanges(request, session);
             }
@@ -76,19 +84,7 @@ public static class CloodApi
                 return CloodApiErrorHandlers.CloodMergeErrorResponse(e);
             }
         });
-        app.MapPost("/api/clood/revert", async ([FromSession] CloodSession session) =>
-        {
-            try
-            {
-                Log.Information("Reverting Clood changes for request: {Request}", session);
-                return await RevertCloodApi.RevertCloodChanges(session);
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "Error occurred while reverting Clood changes");
-                return CloodApiErrorHandlers.CloodMergeRevertResponse(e);
-            }
-        });
+    
 
         GitRoot = gitRoot;
         Log.Information("API configured with GitRoot: {GitRoot}", GitRoot);

@@ -7,16 +7,7 @@ namespace Clood.Errors;
 
 public static class CloodApiErrorHandlers
 {
-    public static IResult CloodMergeRevertResponse(Exception e)
-    {
-        Log.Error(e, "CloodMergeRevertResponse error");
-        return Results.Ok(new CloodResponse<string>()
-        {
-            Data = "",
-            ErrorMessage = e.Message,
-            Success = false
-        });
-    }
+ 
 
     public static IResult CloodPromptErrorResponse(Exception e)
     {
