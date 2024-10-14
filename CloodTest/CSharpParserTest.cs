@@ -49,6 +49,7 @@ static void OuterFunction()
         Assert.That(result, Does.Contain(">OuterFunction>x"));
         Assert.That(result, Does.Contain(">OuterFunction>InnerFunction>y"));
     }
+
     [Test]
     public void TestNestedFunctions2()
     {
@@ -87,6 +88,7 @@ class MyClass
         Assert.That(result, Does.Contain(">OuterFunction>x"));
         Assert.That(result, Does.Contain(">OuterFunction>InnerFunction>y"));
     }
+
     [Test]
     public void TestClassWithMethods()
     {
@@ -114,6 +116,27 @@ class MyClass
         Assert.That(result, Does.Contain("MyClass>Method1>a"));
         Assert.That(result, Does.Contain("MyClass>Method2>b"));
         Assert.That(result, Does.Contain("MyClass>Method2>LocalFunction>c"));
+    }
+
+    [Test]
+    public void TestFullFile()
+    {
+        var sourceCode = File.ReadAllText("CloodApi.cs.txt");
+
+        var result = AnalyzeCode(sourceCode);
+ 
+
+        var expectedHierarchies = new List<string>
+        {
+            "CloodApi",
+            "CloodApi*GitRoot",
+            "CloodApi>ConfigureApi",
+            "CloodApi>ConfigureApi*result",
+            "CloodApi>ConfigureApi*response",
+        };
+
+        Assert.That(result, Has.Exactly(expectedHierarchies.Count).Items);
+        Assert.That(result, Is.EquivalentTo(expectedHierarchies));
     }
 
     [Test]
@@ -177,7 +200,7 @@ public class OuterClass
         var expectedHierarchies = new List<string>
         {
             "OuterClass",
-            "OuterClass>OuterProperty",
+            "OuterClass*OuterProperty",
             "OuterClass>OuterMethod",
             "OuterClass>OuterMethod*outerVar",
             "OuterClass>OuterMethod>LocalMethod1",
@@ -185,20 +208,19 @@ public class OuterClass
             "OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod",
             "OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod*nestedVar",
             "OuterClass>OuterMethod>LocalMethod1*nestedVar",
-            "OuterClass>OuterMethod>anotherOuterVar",
+            "OuterClass>OuterMethod*anotherOuterVar",
             "OuterClass>OuterMethod>LocalMethod2",
             "OuterClass>OuterMethod>LocalMethod2*localMethod2Var",
             "OuterClass>StaticMethod",
-            "OuterClass>static>StaticMethod",
-            "OuterClass>StaticMethod>staticMethodVar",
+            "OuterClass>StaticMethod*staticMethodVar",
             "OuterClass>StaticMethod>StaticLocalMethod",
             "OuterClass>StaticMethod>StaticLocalMethod*staticLocalVar",
             "OuterClass>InnerClass",
-            "OuterClass>InnerClass>InnerProperty",
+            "OuterClass>InnerClass*InnerProperty",
             "OuterClass>InnerClass>InnerMethod",
             "OuterClass>InnerClass>InnerMethod*innerVar",
             "OuterClass>InnerClass>InnerMethod>InnerLocalMethod",
-            "OuterClass>InnerClass>InnerMethod>InnerLocalMethod*innerLocalVar",
+            "OuterClass>InnerClass>InnerMethod>InnerLocalMethod*innerLocalVar"
         };
 
         Assert.That(result, Has.Exactly(expectedHierarchies.Count).Items);

@@ -9,10 +9,11 @@ public class CSharpSymbolTreeAnalyzer
     public List<string> AnalyzeSymbolTree(SyntaxNode root)
     {
         var hierarchies = new HashSet<string>();
- 
+
         // Analyze top-level functions (including static functions)
         var topLevelFunctions = root.DescendantNodes().OfType<LocalFunctionStatementSyntax>()
-            .Where(f => f.Parent is CompilationUnitSyntax or GlobalStatementSyntax);
+            .Where(f => f.Parent is CompilationUnitSyntax or GlobalStatementSyntax
+                or FileScopedNamespaceDeclarationSyntax);
         foreach (var function in topLevelFunctions)
         {
             hierarchies.UnionWith(AnalyzeMethodLocalFunction(function, ""));
@@ -20,7 +21,8 @@ public class CSharpSymbolTreeAnalyzer
 
         // Analyze top-level classes
         var topLevelClasses = root.DescendantNodes().OfType<ClassDeclarationSyntax>()
-            .Where(c => c.Parent is CompilationUnitSyntax   or GlobalStatementSyntax);
+            .Where(c => c.Parent is CompilationUnitSyntax or GlobalStatementSyntax
+                or FileScopedNamespaceDeclarationSyntax);
         foreach (var classDeclaration in topLevelClasses)
         {
             hierarchies.UnionWith(AnalyzeClass(classDeclaration, ""));
@@ -33,7 +35,7 @@ public class CSharpSymbolTreeAnalyzer
     {
         var hierarchies = new HashSet<string>();
         var className = classDeclaration.Identifier.Text;
-        var classPrefix = string.IsNullOrEmpty(parentPrefix) ? className : $"{parentPrefix}>{className}";
+        var classPrefix = string.IsNullOrEmpty(parentPrefix) ? ">" + className : $"{parentPrefix}>{className}";
 
         // Add the class itself to the hierarchy
         hierarchies.Add(classPrefix);
@@ -54,7 +56,7 @@ public class CSharpSymbolTreeAnalyzer
             .Where(p => p.Parent == classDeclaration);
         foreach (var property in properties)
         {
-            hierarchies.Add($"{classPrefix}>{property.Identifier.Text}");
+            hierarchies.Add($"{classPrefix}@{property.Identifier.Text}");
         }
 
         // Analyze methods
@@ -63,7 +65,7 @@ public class CSharpSymbolTreeAnalyzer
         foreach (var methodDeclaration in methodDeclarations)
         {
             var methodPrefix = $"{classPrefix}>{methodDeclaration.Identifier.Text}";
-            
+
             // Add the method itself as a leaf
             hierarchies.Add(methodPrefix);
 
@@ -87,8 +89,9 @@ public class CSharpSymbolTreeAnalyzer
 
         return hierarchies;
     }
-    
-    private IEnumerable<string> AnalyzeMethodLocalFunction(LocalFunctionStatementSyntax methodDeclaration, string prefix)
+
+    private IEnumerable<string> AnalyzeMethodLocalFunction(LocalFunctionStatementSyntax methodDeclaration,
+        string prefix)
     {
         var methodName = methodDeclaration.Identifier.Text;
         var newPrefix = string.IsNullOrEmpty(prefix) ? "" : $"{prefix}>{methodName}";
@@ -98,7 +101,7 @@ public class CSharpSymbolTreeAnalyzer
     private IEnumerable<string> AnalyzeMethod(MethodDeclarationSyntax methodDeclaration, string prefix)
     {
         var methodName = methodDeclaration.Identifier.Text;
-        var newPrefix = $"{prefix}>{methodName}";
+        var newPrefix = $"{prefix}/{methodName}";
         return AnalyzeFunction(methodDeclaration, newPrefix);
     }
 
@@ -116,8 +119,8 @@ public class CSharpSymbolTreeAnalyzer
             {
                 case LocalFunctionStatementSyntax localFunction:
                     var functionName = localFunction.Identifier.Text;
-                    var newPrefix = $"{currentPrefix}>{functionName}";
-                    
+                    var newPrefix = $"{currentPrefix}/{functionName}";
+
                     // Add the local function to hierarchies
                     hierarchies.Add(newPrefix);
 
@@ -125,11 +128,12 @@ public class CSharpSymbolTreeAnalyzer
                     {
                         stack.Push((childNode, newPrefix));
                     }
+
                     break;
 
                 case VariableDeclaratorSyntax variableDeclarator:
                     var variableName = variableDeclarator.Identifier.Text;
-                    hierarchies.Add($"{currentPrefix}*{variableName}");
+                    hierarchies.Add($"{currentPrefix}+{variableName}");
                     break;
 
                 default:
@@ -137,6 +141,7 @@ public class CSharpSymbolTreeAnalyzer
                     {
                         stack.Push((childNode, currentPrefix));
                     }
+
                     break;
             }
         }

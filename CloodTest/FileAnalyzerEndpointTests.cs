@@ -190,27 +190,27 @@ public class FileAnalyzerEndpointTests
         var expectedStrings = new List<string>
         {
             "ComplexClass.cs:OuterClass",
-            "ComplexClass.cs:OuterClass>OuterProperty",
+            "ComplexClass.cs:OuterClass*OuterProperty",
             "ComplexClass.cs:OuterClass>OuterMethod",
-            "ComplexClass.cs:OuterClass>OuterMethod>outerVar",
+            "ComplexClass.cs:OuterClass>OuterMethod*outerVar",
             "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1",
-            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>localMethod1Var",
+            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1*localMethod1Var",
             "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod",
-            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod>nestedVar",
-            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>nestedVar",
-            "ComplexClass.cs:OuterClass>OuterMethod>anotherOuterVar",
+            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod*nestedVar",
+            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1*nestedVar",
+            "ComplexClass.cs:OuterClass>OuterMethod*anotherOuterVar",
             "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod2",
-            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod2>localMethod2Var",
+            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod2*localMethod2Var",
             "ComplexClass.cs:OuterClass>StaticMethod",
-            "ComplexClass.cs:OuterClass>StaticMethod>staticMethodVar",
+            "ComplexClass.cs:OuterClass>StaticMethod*staticMethodVar",
             "ComplexClass.cs:OuterClass>StaticMethod>StaticLocalMethod",
-            "ComplexClass.cs:OuterClass>StaticMethod>StaticLocalMethod>staticLocalVar",
+            "ComplexClass.cs:OuterClass>StaticMethod>StaticLocalMethod*staticLocalVar",
             "ComplexClass.cs:OuterClass>InnerClass",
-            "ComplexClass.cs:OuterClass>InnerClass>InnerProperty",
+            "ComplexClass.cs:OuterClass>InnerClass*InnerProperty",
             "ComplexClass.cs:OuterClass>InnerClass>InnerMethod",
-            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod>innerVar",
+            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod*innerVar",
             "ComplexClass.cs:OuterClass>InnerClass>InnerMethod>InnerLocalMethod",
-            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod>InnerLocalMethod>innerLocalVar"
+            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod>InnerLocalMethod*innerLocalVar"
         };
 
         CollectionAssert.AreEqual(expectedStrings, result.Data);

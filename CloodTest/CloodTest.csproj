@@ -29,4 +29,10 @@
       <ProjectReference Include="..\Clood\Clood.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="CloodApi.cs.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>
