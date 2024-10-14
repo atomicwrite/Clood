@@ -47,7 +47,7 @@ public class CSharpSymbolTreeAnalyzer
         {
             foreach (var variable in field.Declaration.Variables)
             {
-                hierarchies.Add($"{classPrefix}>{variable.Identifier.Text}");
+                hierarchies.Add($"{classPrefix}@{variable.Identifier.Text}");
             }
         }
 
@@ -64,7 +64,7 @@ public class CSharpSymbolTreeAnalyzer
             .Where(m => m.Parent == classDeclaration);
         foreach (var methodDeclaration in methodDeclarations)
         {
-            var methodPrefix = $"{classPrefix}>{methodDeclaration.Identifier.Text}";
+            var methodPrefix = $"{classPrefix}/{methodDeclaration.Identifier.Text}";
 
             // Add the method itself as a leaf
             hierarchies.Add(methodPrefix);
@@ -72,7 +72,7 @@ public class CSharpSymbolTreeAnalyzer
             // If it's static, add it with the "static" prefix
             if (methodDeclaration.Modifiers.Any(SyntaxKind.StaticKeyword))
             {
-                hierarchies.Add($"{classPrefix}>{methodDeclaration.Identifier.Text}");
+                hierarchies.Add($"{classPrefix}/{methodDeclaration.Identifier.Text}");
             }
 
             // Analyze the method's body
@@ -94,7 +94,7 @@ public class CSharpSymbolTreeAnalyzer
         string prefix)
     {
         var methodName = methodDeclaration.Identifier.Text;
-        var newPrefix = string.IsNullOrEmpty(prefix) ? "" : $"{prefix}>{methodName}";
+        var newPrefix = string.IsNullOrEmpty(prefix) ? "" : $"{prefix}/{methodName}";
         return AnalyzeFunction(methodDeclaration, newPrefix);
     }
 

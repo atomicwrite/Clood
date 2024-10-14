@@ -22,6 +22,7 @@ public class Program
         if (isTestEnvironment)
         {
             CloodServer.Start(serverUrls?? throw new InvalidOperationException("Server urls was null"),gitRoot ?? throw new InvalidOperationException("Git root was null"));
+            return;
         }
         try
         {

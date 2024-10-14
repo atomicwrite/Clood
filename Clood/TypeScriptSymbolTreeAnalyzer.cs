@@ -156,7 +156,7 @@ public class TypeScriptSymbolTreeAnalyzer
             if (property is PropertyAssignment propAssignment)
             {
                 var propName = propAssignment.PropertyName?.GetText() ?? propAssignment.Name.GetText();
-                var propPrefix = $"{prefix}>{propName}";
+                var propPrefix = $"{prefix}@{propName}";
                 hierarchies.Add(propPrefix);
 
                 if (propAssignment.Initializer is ArrowFunction arrowFunction)

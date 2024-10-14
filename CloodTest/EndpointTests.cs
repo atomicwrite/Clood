@@ -1,41 +1,18 @@
 using System.Diagnostics;
 using System.Text;
 using CliWrap;
-using CliWrap.Buffered;
-using Clood;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Clood.Endpoints.API;
-using Clood.Session;
-using Program = Clood.Program;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Clood.Endpoints.API;
+using CliWrap.Buffered; 
+using Newtonsoft.Json; 
+using Program = Clood.Program; 
 using Clood.Endpoints.DTO;
-using Clood.Gits;
-using Clood.Session;
+using Clood.Gits; 
 
 namespace CloodTest;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Hosting;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting; 
+using Microsoft.Extensions.Configuration; 
 
 public class CloodWebFactory : WebApplicationFactory<Program>
 {

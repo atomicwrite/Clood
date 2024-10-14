@@ -15,12 +15,20 @@ public class VueTemplateAnalyzer
         Console.WriteLine(PrintDomTree(doc));
 
         var rootNode = doc.DocumentNode.SelectSingleNode("//template") ?? doc.DocumentNode;
-        foreach (var child in rootNode.ChildNodes)
+        
+        if (rootNode.Name.ToLower() == "#document")
         {
-            if (child.NodeType == HtmlNodeType.Element)
+            foreach (var child in rootNode.ChildNodes)
             {
-                AnalyzeElement(child, "", hierarchies);
+                if (child.NodeType == HtmlNodeType.Element)
+                {
+                    AnalyzeElement(child, "", hierarchies);
+                }
             }
+        }
+        else
+        {
+            AnalyzeElement(rootNode, "", hierarchies);
         }
 
         return hierarchies.ToList();
@@ -80,6 +88,7 @@ public class VueTemplateAnalyzer
             }
         }
     }
+
     private bool AnalyzeAttribute(HtmlAttribute attribute, string prefix, HashSet<string> hierarchies)
     {
         if (attribute.Name.StartsWith(":") || attribute.Name.StartsWith("v-bind:"))
@@ -112,11 +121,5 @@ public class VueTemplateAnalyzer
             return true;
         }
         return false;
-    }
-    private string EscapeAttributeValue(string value)
-    {
-        return value;
-        // Replace double quotes with escaped double quotes
-        return value.Replace("\"", "\\\"");
     }
 }

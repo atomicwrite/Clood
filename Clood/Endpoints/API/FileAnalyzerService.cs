@@ -7,6 +7,9 @@ namespace Clood.Endpoints.API;
 public static partial class FileAnalyzerService
 {
     private static readonly Regex DirSplitter = MyRegex();
+    private static readonly VueFileAnalyzer VueFileAnalyzer = new();
+    private static readonly TypeScriptFileAnalyzer TypeScriptFileAnalyzer = new ();
+    
     public static List<string> AnalyzeFiles(AnalyzeFilesRequest request)
     {
         var result = new List<string>();
@@ -57,6 +60,8 @@ public static partial class FileAnalyzerService
             }
 
             var extension = Path.GetExtension(fullPath);
+            var allText = File.ReadAllText( fullPath);
+            var fileName = Path.GetFileName(fullPath).Trim();
             switch (extension.ToLowerInvariant())
             {
                 case ".cs":
@@ -66,12 +71,24 @@ public static partial class FileAnalyzerService
                         throw new FileNotFoundException($"File not found: {fullPath}");
                     }
 
-                    var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(fullPath));
+                    var tree = CSharpSyntaxTree.ParseText(allText);
                     var root = tree.GetRoot();
                     var treeStrings = analyzer.AnalyzeSymbolTree(root);
-                    result.AddRange(treeStrings.Select(s => $"{Path.GetFileName(fullPath)}:{s}"));
+                    result.AddRange(treeStrings.Select(s => $"{fileName}:{s}"));
                     break;
                 }
+                case ".vue":
+
+                    var vueTreeStrings = VueFileAnalyzer.AnalyzeVueFile(allText);
+                    
+                    result.AddRange(vueTreeStrings.Select(s => $"{fileName}:{s}"));
+                    break;
+                case ".ts":
+
+                    var tsTreeStrings = TypeScriptFileAnalyzer.AnalyzeFile(fullPath);
+                    
+                    result.AddRange(tsTreeStrings.Select(s => $"{fileName}:{s}"));
+                    break;
                 default:
                     // Optionally, you might want to log unsupported file types
                     // logger.LogWarning($"Unsupported file type: {extension} for file {fullPath}");
