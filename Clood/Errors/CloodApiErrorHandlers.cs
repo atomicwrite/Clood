@@ -7,8 +7,17 @@ namespace Clood.Errors;
 
 public static class CloodApiErrorHandlers
 {
- 
-
+    
+    public static IResult CloodAnalyzeFilesErrorResponse(Exception e)
+    {
+        Log.Error(e, "CloodAnalyzeFilesErrorResponse error");
+        return Results.Ok(new CloodResponse<List<string>>()
+        {
+            Data = new List<string>(),
+            ErrorMessage = e.Message,
+            Success = false
+        });
+    }
     public static IResult CloodPromptErrorResponse(Exception e)
     {
         Log.Error(e, "CloodPromptErrorResponse error");

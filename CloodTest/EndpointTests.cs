@@ -85,8 +85,8 @@ public class CloodWebFactory : WebApplicationFactory<Program>
 public class EndpointTests
 {
     private CloodWebFactory _factory;
-    private HttpClient _client;
-    private string _tempRepoPath;
+    protected HttpClient _client;
+    protected string _tempRepoPath;
 
     [SetUp]
     public void Setup()

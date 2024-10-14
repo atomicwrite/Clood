@@ -33,4 +33,13 @@
       <PackageReference Include="VYaml" Version="0.27.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Reference Include="Microsoft.CodeAnalysis">
+        <HintPath>..\..\..\home\ender\.nuget\packages\microsoft.codeanalysis.common\4.12.0-2.final\lib\net8.0\Microsoft.CodeAnalysis.dll</HintPath>
+      </Reference>
+      <Reference Include="Microsoft.CodeAnalysis.CSharp">
+        <HintPath>..\..\..\home\ender\.nuget\packages\microsoft.codeanalysis.csharp\4.12.0-2.final\lib\net8.0\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
 </Project>

@@ -14,6 +14,37 @@ public static class CloodApi
 
     public static void ConfigureApi(WebApplication app, string gitRoot)
     {
+        
+        GitRoot = gitRoot;
+        Log.Information("API configured with GitRoot: {GitRoot}", GitRoot);
+        app.MapPost("/api/clood/analyze-files", async ([FromBody] AnalyzeFilesRequest request) =>
+        {
+            try
+            {
+                Log.Information("Starting file analysis for request: {@Request}", request);
+
+                var result = FileAnalyzerService.AnalyzeFiles(request);
+
+                return Results.Ok(new CloodResponse<List<string>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (InvalidFilePathException e)
+            {
+                Log.Error(e, "Invalid file path error occurred while analyzing files");
+                return CloodApiErrorHandlers.CloodAnalyzeFilesErrorResponse(e);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Error occurred while analyzing files");
+                return CloodApiErrorHandlers.CloodAnalyzeFilesErrorResponse(e);
+            }
+        });
+
+   
+    
         app.MapPost("/api/clood/prompt", async ([FromBody] CloodPromptRequest request) =>
         {
             try
