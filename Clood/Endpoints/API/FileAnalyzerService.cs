@@ -1,4 +1,5 @@
 using Clood.Endpoints.DTO;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Clood.Endpoints.API;
 
@@ -22,8 +23,9 @@ public static class FileAnalyzerService
             {
                 case ".cs":
                 {
-                    var symbols = analyzer.AnalyzeFile(file);
-                    var treeStrings = symbols.ToTreeString();
+                    var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file));
+                    var root = tree.GetRoot();
+                    var treeStrings = analyzer.AnalyzeSymbolTree(root);
                     result.AddRange(treeStrings.Select(s => $"{Path.GetFileName(file)}:{s}"));
                     break;
                 }

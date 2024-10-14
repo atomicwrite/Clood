@@ -27,10 +27,13 @@ public class FileAnalyzerEndpointTests
 
         _factory.WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("test", "true");
-            builder.UseSetting("server", "true");
+            builder.UseSetting("test",
+                "true");
+            builder.UseSetting("server",
+                "true");
             builder.UseSetting("git-root", _tempRepoPath);
-            builder.UseSetting("server-urls", "https://localhost:9090");
+            builder.UseSetting("server-urls",
+                "https://localhost:9090");
         });
         _client = _factory.CreateClient();
 
@@ -79,8 +82,10 @@ public class FileAnalyzerEndpointTests
     public async Task AnalyzeFiles_WithFileOutsideGitRoot_ShouldFail()
     {
         // Arrange
-        var outsideFilePath = Path.Combine(Path.GetTempPath(), "outside_file.cs");
-        File.WriteAllText(outsideFilePath, "public class OutsideClass { }");
+        var outsideFilePath = Path.Combine(Path.GetTempPath(),
+            "outside_file.cs");
+        File.WriteAllText(outsideFilePath,
+            "public class OutsideClass { }");
 
         var analyzeRequest = new AnalyzeFilesRequest
         {
@@ -89,7 +94,8 @@ public class FileAnalyzerEndpointTests
 
         // Act
         var response = await _client.PostAsync("/api/clood/analyze-files",
-            new StringContent(JsonConvert.SerializeObject(analyzeRequest), Encoding.UTF8, "application/json"));
+            new StringContent(JsonConvert.SerializeObject(analyzeRequest), Encoding.UTF8,
+                "application/json"));
 
         // Assert
         Assert.That(response.IsSuccessStatusCode, Is.True);
@@ -155,17 +161,19 @@ public class FileAnalyzerEndpointTests
                     }
                 }";
 
-        var filePath = Path.Combine(_tempRepoPath, "ComplexClass.cs");
-        File.WriteAllText(filePath, code);
+        var filePath = Path.Combine(_tempRepoPath,
+            "ComplexClass.cs");
+        await File.WriteAllTextAsync(filePath, code);
 
         var analyzeRequest = new AnalyzeFilesRequest
         {
-            Files = new List<string> { filePath }
+            Files = [filePath]
         };
 
         // Act
         var response = await _client.PostAsync("/api/clood/analyze-files",
-            new StringContent(JsonConvert.SerializeObject(analyzeRequest), Encoding.UTF8, "application/json"));
+            new StringContent(JsonConvert.SerializeObject(analyzeRequest), Encoding.UTF8,
+                "application/json"));
 
         // Assert
         Assert.That(response.IsSuccessStatusCode, Is.True);
@@ -187,8 +195,9 @@ public class FileAnalyzerEndpointTests
             "ComplexClass.cs:OuterClass>OuterMethod>outerVar",
             "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1",
             "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>localMethod1Var",
-            "ComplexClass.cs:OuterClass>OuterMethod>NestedLocalMethod",
-            "ComplexClass.cs:OuterClass>OuterMethod>NestedLocalMethod>nestedVar",
+            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod",
+            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod>nestedVar",
+            "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod1>nestedVar",
             "ComplexClass.cs:OuterClass>OuterMethod>anotherOuterVar",
             "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod2",
             "ComplexClass.cs:OuterClass>OuterMethod>LocalMethod2>localMethod2Var",
@@ -196,12 +205,12 @@ public class FileAnalyzerEndpointTests
             "ComplexClass.cs:OuterClass>StaticMethod>staticMethodVar",
             "ComplexClass.cs:OuterClass>StaticMethod>StaticLocalMethod",
             "ComplexClass.cs:OuterClass>StaticMethod>StaticLocalMethod>staticLocalVar",
-            "ComplexClass.cs:InnerClass",
-            "ComplexClass.cs:InnerClass>InnerProperty",
-            "ComplexClass.cs:InnerClass>InnerMethod",
-            "ComplexClass.cs:InnerClass>InnerMethod>innerVar",
-            "ComplexClass.cs:InnerClass>InnerMethod>InnerLocalMethod",
-            "ComplexClass.cs:InnerClass>InnerMethod>InnerLocalMethod>innerLocalVar",
+            "ComplexClass.cs:OuterClass>InnerClass",
+            "ComplexClass.cs:OuterClass>InnerClass>InnerProperty",
+            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod",
+            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod>innerVar",
+            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod>InnerLocalMethod",
+            "ComplexClass.cs:OuterClass>InnerClass>InnerMethod>InnerLocalMethod>innerLocalVar"
         };
 
         CollectionAssert.AreEqual(expectedStrings, result.Data);
