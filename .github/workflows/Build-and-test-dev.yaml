@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CLOODKEY: ${{ secrets.CLOODKEY }}
     steps:
       - uses: actions/checkout@v3
       - name: Install Git
@@ -22,6 +24,10 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Restore dependencies
         run: dotnet restore
+      - name: Set up .NET user secrets
+        run: |
+          dotnet user-secrets init --project path/to/your/test/project
+          dotnet user-secrets set "clood-key" "$CLOODKEY" --project path/to/your/test/project
       - name: Build
         run: dotnet build --configuration Release --no-restore
       - name: Test
