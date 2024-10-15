@@ -16,7 +16,7 @@ public static class ClaudiaHelper
             .AddEnvironmentVariables()
             .Build();
 
-        var apiKey = config["clood-key"];
+        var apiKey = config["clood-key"] ?? config["CLOODKEY"];
 
         if (string.IsNullOrEmpty(apiKey))
         {
