@@ -84,8 +84,8 @@ public class FileAnalyzerEndpointTests
         // Arrange
         var outsideFilePath = Path.Combine(CloodFileMapTestsHelper.GetTempPath(),
             "outside_file.cs");
-        File.WriteAllText(outsideFilePath,
-            "public class OutsideClass { }");
+        // await File.WriteAllTextAsync(outsideFilePath,
+        //     "public class OutsideClass { }");
 
         var analyzeRequest = new AnalyzeFilesRequest
         {
