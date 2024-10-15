@@ -26,10 +26,10 @@ jobs:
         run: dotnet restore
       - name: Set up .NET user secrets
         run: |
-          dotnet user-secrets init --project CloodAndFriends/Clood
-          dotnet user-secrets set "clood-key" "$CLOODKEY" --project CloodAndFriends/Clood
-          dotnet user-secrets init --project CloodAndFriends/Clood.Test
-          dotnet user-secrets set "clood-key" "$CLOODKEY" --project CloodAndFriends/Clood.Test
+          dotnet user-secrets init  
+          dotnet user-secrets set "clood-key" "$CLOODKEY"  
+          dotnet user-secrets init --project ../Clood.Test
+          dotnet user-secrets set "clood-key" "$CLOODKEY" --project ../Clood.Test
       - name: Build
         run: dotnet build --configuration Release --no-restore
       - name: Test
