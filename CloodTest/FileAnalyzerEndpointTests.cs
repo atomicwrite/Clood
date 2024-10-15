@@ -16,7 +16,7 @@ public class FileAnalyzerEndpointTests
     [SetUp]
     public void Setup()
     {
-        _tempRepoPath = Path.Combine(CloodFileMapTestsHelper.GetTempPath(), Path.GetRandomFileName());
+        _tempRepoPath = CloodFileMapTestsHelper.GetTempPath();
         if (string.IsNullOrEmpty(_tempRepoPath))
         {
             throw new Exception("Couldn't get temp repo or empty");
@@ -42,7 +42,7 @@ public class FileAnalyzerEndpointTests
         Directory.CreateDirectory(_tempRepoPath);
 
         // Initialize Git repository
-        RunGitCommand($"init {_tempRepoPath}");
+        RunGitCommand($"init {_tempRepoPath}").Wait();
     }
 
     [TearDown]
