@@ -42,7 +42,7 @@ public class FileAnalyzerEndpointTests
         Directory.CreateDirectory(_tempRepoPath);
 
         // Initialize Git repository
-        RunGitCommand("init");
+        RunGitCommand($"init {_tempRepoPath}");
     }
 
     [TearDown]
