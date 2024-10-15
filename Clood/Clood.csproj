@@ -26,6 +26,7 @@
       <PackageReference Include="HtmlAgilityPack" Version="1.11.67" />
       <PackageReference Include="Markdig" Version="0.37.0" />
       <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.8" />
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0-2.final" />
       <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.0-rc.1.24431.7" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -36,13 +37,6 @@
       <PackageReference Include="VYaml" Version="0.27.1" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Reference Include="Microsoft.CodeAnalysis">
-        <HintPath>..\..\..\home\ender\.nuget\packages\microsoft.codeanalysis.common\4.12.0-2.final\lib\net8.0\Microsoft.CodeAnalysis.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.CodeAnalysis.CSharp">
-        <HintPath>..\..\..\home\ender\.nuget\packages\microsoft.codeanalysis.csharp\4.12.0-2.final\lib\net8.0\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
-      </Reference>
-    </ItemGroup>
+ 
 
 </Project>
