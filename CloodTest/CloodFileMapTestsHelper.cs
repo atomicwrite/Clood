@@ -7,7 +7,8 @@ public static class CloodFileMapTestsHelper
         var environmentVariable = Environment.GetEnvironmentVariable("RUNNER_TEMP");
         if (environmentVariable != null)
         {
-            environmentVariable += environmentVariable + "/tmp";
+            var random = Random.Shared.Next();
+            environmentVariable += environmentVariable + $"/tmp{random}/";
         }
         return environmentVariable ?? Path.GetTempPath();
     }
