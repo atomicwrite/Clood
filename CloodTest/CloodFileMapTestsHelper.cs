@@ -9,7 +9,9 @@ public static class CloodFileMapTestsHelper
         {
             var random = Random.Shared.Next();
             environmentVariable += environmentVariable + $"/tmp{random}/";
+            Console.WriteLine($"Env: {environmentVariable}");
         }
         return environmentVariable ?? Path.GetTempPath();
+        
     }
 }
