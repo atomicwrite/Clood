@@ -11,7 +11,7 @@ namespace CloodTest
         [SetUp]
         public void Setup()
         {
-            rootFolder = Path.Combine(Path.GetTempPath(), "ClaudiaHelperTest");
+            rootFolder = Path.Combine(CloodFileMapTestsHelper.GetTempPath(), "ClaudiaHelperTest");
             Directory.CreateDirectory(rootFolder);
 
             testFiles =

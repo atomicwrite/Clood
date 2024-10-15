@@ -16,7 +16,7 @@ public class FileAnalyzerEndpointTests
     [SetUp]
     public void Setup()
     {
-        _tempRepoPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        _tempRepoPath = Path.Combine(CloodFileMapTestsHelper.GetTempPath(), Path.GetRandomFileName());
         if (string.IsNullOrEmpty(_tempRepoPath))
         {
             throw new Exception("Couldn't get temp repo or empty");
@@ -82,7 +82,7 @@ public class FileAnalyzerEndpointTests
     public async Task AnalyzeFiles_WithFileOutsideGitRoot_ShouldFail()
     {
         // Arrange
-        var outsideFilePath = Path.Combine(Path.GetTempPath(),
+        var outsideFilePath = Path.Combine(CloodFileMapTestsHelper.GetTempPath(),
             "outside_file.cs");
         File.WriteAllText(outsideFilePath,
             "public class OutsideClass { }");

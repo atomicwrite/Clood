@@ -68,7 +68,7 @@ public class EndpointTests
     [SetUp]
     public void Setup()
     {
-        _tempRepoPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        _tempRepoPath = Path.Combine(CloodFileMapTestsHelper.GetTempPath(), Path.GetRandomFileName());
         if (string.IsNullOrEmpty(_tempRepoPath))
         {
             throw new Exception("Couldn't get temp repo or empty");

@@ -1,27 +1,24 @@
 name: Build and Release Clood
-
 on:
   push:
     branches:
       - main-clood-keys
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
-
+      - name: Install Git
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
-
       - name: Restore dependencies
         run: dotnet restore
-
       - name: Build
         run: dotnet build --configuration Release --no-restore
-
       - name: Test
         run: dotnet test --no-restore --verbosity normal

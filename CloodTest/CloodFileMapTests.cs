@@ -10,7 +10,7 @@ namespace CloodTest
         [SetUp]
         public void Setup()
         {
-            _testFolderPath = Path.Combine(Path.GetTempPath(), "CloodFileMapTest");
+            _testFolderPath = Path.Combine(CloodFileMapTestsHelper.GetTempPath(), "CloodFileMapTest");
             Directory.CreateDirectory(_testFolderPath);
         }
 
