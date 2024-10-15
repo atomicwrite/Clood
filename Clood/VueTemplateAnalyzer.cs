@@ -15,8 +15,9 @@ public class VueTemplateAnalyzer
         Console.WriteLine(PrintDomTree(doc));
 
         var rootNode = doc.DocumentNode.SelectSingleNode("//template") ?? doc.DocumentNode;
-        
-        if (rootNode.Name.ToLower() == "#document")
+
+        if (rootNode.Name.Equals("#document", StringComparison.CurrentCultureIgnoreCase) ||
+            rootNode.Name.Equals("template", StringComparison.CurrentCultureIgnoreCase))
         {
             foreach (var child in rootNode.ChildNodes)
             {
@@ -50,6 +51,7 @@ public class VueTemplateAnalyzer
             {
                 stringBuilder.AppendLine($"{indent}  {attribute.Name}=\"{attribute.Value}\"");
             }
+
             foreach (var child in node.ChildNodes)
             {
                 PrintElementTree(child, indent + "  ", stringBuilder);
@@ -67,7 +69,9 @@ public class VueTemplateAnalyzer
 
     private void AnalyzeElement(HtmlNode element, string prefix, HashSet<string> hierarchies)
     {
-        var elementPrefix = string.IsNullOrEmpty(prefix) ? "/" + element.Name.ToLower() : $"{prefix}/{element.Name.ToLower()}";
+        var elementPrefix = string.IsNullOrEmpty(prefix)
+            ? "/" + element.Name.ToLower()
+            : $"{prefix}/{element.Name.ToLower()}";
         bool hasVueVariable = false;
         foreach (var attribute in element.Attributes)
         {
@@ -76,10 +80,12 @@ public class VueTemplateAnalyzer
                 hasVueVariable = true;
             }
         }
+
         if (hasVueVariable)
         {
             hierarchies.Add(elementPrefix);
         }
+
         foreach (var child in element.ChildNodes)
         {
             if (child.NodeType == HtmlNodeType.Element)
@@ -93,13 +99,17 @@ public class VueTemplateAnalyzer
     {
         if (attribute.Name.StartsWith(":") || attribute.Name.StartsWith("v-bind:"))
         {
-            var propName = attribute.Name.StartsWith("v-bind:") ? attribute.Name.Substring(7) : attribute.Name.Substring(1);
+            var propName = attribute.Name.StartsWith("v-bind:")
+                ? attribute.Name.Substring(7)
+                : attribute.Name.Substring(1);
             hierarchies.Add($"{prefix}/:{propName}={attribute.Value}");
             return true;
         }
         else if (attribute.Name.StartsWith("@") || attribute.Name.StartsWith("v-on:"))
         {
-            var methodName = attribute.Name.StartsWith("v-on:") ? attribute.Name.Substring(5) : attribute.Name.Substring(1);
+            var methodName = attribute.Name.StartsWith("v-on:")
+                ? attribute.Name.Substring(5)
+                : attribute.Name.Substring(1);
             hierarchies.Add($"{prefix}/@{methodName}={attribute.Value}");
             return true;
         }
@@ -118,8 +128,10 @@ public class VueTemplateAnalyzer
             {
                 hierarchies.Add($"{prefix}/+{attribute.Name}={attribute.Value}");
             }
+
             return true;
         }
+
         return false;
     }
 }
