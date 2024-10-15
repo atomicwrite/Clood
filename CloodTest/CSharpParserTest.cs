@@ -27,7 +27,7 @@ static void TopLevelFunction()
         var result = AnalyzeCode(sourceCode);
 
         Assert.That(result, Has.Exactly(2).Items);
-        Assert.That(result, Does.Contain(">TopLevelFunction>x"));
+        Assert.That(result, Does.Contain("/TopLevelFunction+x"));
     }
 
     [Test]
@@ -46,8 +46,8 @@ static void OuterFunction()
         var result = AnalyzeCode(sourceCode);
 
         Assert.That(result, Has.Exactly(5).Items);
-        Assert.That(result, Does.Contain(">OuterFunction>x"));
-        Assert.That(result, Does.Contain(">OuterFunction>InnerFunction>y"));
+        Assert.That(result, Does.Contain("/OuterFunction+x"));
+        Assert.That(result, Does.Contain("/OuterFunction/InnerFunction+y"));
     }
 
     [Test]
@@ -85,8 +85,8 @@ class MyClass
         var result = AnalyzeCode(sourceCode);
 
         Assert.That(result, Has.Exactly(12).Items);
-        Assert.That(result, Does.Contain(">OuterFunction>x"));
-        Assert.That(result, Does.Contain(">OuterFunction>InnerFunction>y"));
+        Assert.That(result, Does.Contain("/OuterFunction+x"));
+        Assert.That(result, Does.Contain("/OuterFunction/InnerFunction+y"));
     }
 
     [Test]
@@ -113,9 +113,9 @@ class MyClass
         var result = AnalyzeCode(sourceCode);
 
         Assert.That(result, Has.Exactly(7).Items);
-        Assert.That(result, Does.Contain("MyClass>Method1>a"));
-        Assert.That(result, Does.Contain("MyClass>Method2>b"));
-        Assert.That(result, Does.Contain("MyClass>Method2>LocalFunction>c"));
+        Assert.That(result, Does.Contain(">MyClass/Method1+a"));
+        Assert.That(result, Does.Contain(">MyClass/Method2+b"));
+        Assert.That(result, Does.Contain(">MyClass/Method2/LocalFunction+c"));
     }
 
     [Test]
@@ -128,11 +128,11 @@ class MyClass
 
         var expectedHierarchies = new List<string>
         {
-            "CloodApi",
-            "CloodApi*GitRoot",
-            "CloodApi>ConfigureApi",
-            "CloodApi>ConfigureApi*result",
-            "CloodApi>ConfigureApi*response",
+            ">CloodApi",
+            ">CloodApi@GitRoot",
+            ">CloodApi/ConfigureApi",
+            ">CloodApi/ConfigureApi+result",
+            ">CloodApi/ConfigureApi+response",
         };
 
         Assert.That(result, Has.Exactly(expectedHierarchies.Count).Items);
@@ -199,28 +199,28 @@ public class OuterClass
 
         var expectedHierarchies = new List<string>
         {
-            "OuterClass",
-            "OuterClass*OuterProperty",
-            "OuterClass>OuterMethod",
-            "OuterClass>OuterMethod*outerVar",
-            "OuterClass>OuterMethod>LocalMethod1",
-            "OuterClass>OuterMethod>LocalMethod1*localMethod1Var",
-            "OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod",
-            "OuterClass>OuterMethod>LocalMethod1>NestedLocalMethod*nestedVar",
-            "OuterClass>OuterMethod>LocalMethod1*nestedVar",
-            "OuterClass>OuterMethod*anotherOuterVar",
-            "OuterClass>OuterMethod>LocalMethod2",
-            "OuterClass>OuterMethod>LocalMethod2*localMethod2Var",
-            "OuterClass>StaticMethod",
-            "OuterClass>StaticMethod*staticMethodVar",
-            "OuterClass>StaticMethod>StaticLocalMethod",
-            "OuterClass>StaticMethod>StaticLocalMethod*staticLocalVar",
-            "OuterClass>InnerClass",
-            "OuterClass>InnerClass*InnerProperty",
-            "OuterClass>InnerClass>InnerMethod",
-            "OuterClass>InnerClass>InnerMethod*innerVar",
-            "OuterClass>InnerClass>InnerMethod>InnerLocalMethod",
-            "OuterClass>InnerClass>InnerMethod>InnerLocalMethod*innerLocalVar"
+            ">OuterClass",
+            ">OuterClass@OuterProperty",
+            ">OuterClass/OuterMethod",
+            ">OuterClass/OuterMethod+outerVar",
+            ">OuterClass/OuterMethod/LocalMethod1",
+            ">OuterClass/OuterMethod/LocalMethod1+localMethod1Var",
+            ">OuterClass/OuterMethod/LocalMethod1/NestedLocalMethod",
+            ">OuterClass/OuterMethod/LocalMethod1/NestedLocalMethod+nestedVar",
+            ">OuterClass/OuterMethod/LocalMethod1+nestedVar",
+            ">OuterClass/OuterMethod+anotherOuterVar",
+            ">OuterClass/OuterMethod/LocalMethod2",
+            ">OuterClass/OuterMethod/LocalMethod2+localMethod2Var",
+            ">OuterClass/StaticMethod",
+            ">OuterClass/StaticMethod+staticMethodVar",
+            ">OuterClass/StaticMethod/StaticLocalMethod",
+            ">OuterClass/StaticMethod/StaticLocalMethod+staticLocalVar",
+            ">OuterClass>InnerClass",
+            ">OuterClass>InnerClass@InnerProperty",
+            ">OuterClass>InnerClass/InnerMethod",
+            ">OuterClass>InnerClass/InnerMethod+innerVar",
+            ">OuterClass>InnerClass/InnerMethod/InnerLocalMethod",
+            ">OuterClass>InnerClass/InnerMethod/InnerLocalMethod+innerLocalVar"
         };
 
         Assert.That(result, Has.Exactly(expectedHierarchies.Count).Items);

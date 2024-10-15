@@ -6,24 +6,11 @@ using Zu.TypeScript.TsTypes;
 
 public class TypeScriptSymbolTreeAnalyzer
 {
-    
-    private void AnalyzeEnum(EnumDeclaration enumDeclaration, string parentPrefix, HashSet<string> hierarchies)
-    {
-        var enumName = enumDeclaration.IdentifierStr;
-        var enumPrefix = string.IsNullOrEmpty(parentPrefix) ? "@" + enumName : $"{parentPrefix}@{enumName}";
-        hierarchies.Add(enumPrefix);
-
-        foreach (var member in enumDeclaration.Members)
-        {
-            var memberName = member.Name.GetText();
-            hierarchies.Add($"{enumPrefix}>{memberName}");
-        }
-    }
     public List<string> AnalyzeSymbolTree(string sourceCode, string fileName)
     {
         var ast = new TypeScriptAST(sourceCode, fileName);
         var hierarchies = new HashSet<string>();
-
+        Console.WriteLine(ast.GetTreeString());
         AnalyzeNode(ast.RootNode, "", hierarchies);
 
         return hierarchies.ToList();
@@ -45,6 +32,9 @@ public class TypeScriptSymbolTreeAnalyzer
             case ClassDeclaration classDecl:
                 AnalyzeClass(classDecl, prefix, hierarchies);
                 break;
+            case InterfaceDeclaration interfaceDecl:
+                AnalyzeInterface(interfaceDecl, prefix, hierarchies);
+                break;
             case FunctionDeclaration function:
                 AnalyzeFunction(function, prefix, hierarchies);
                 break;
@@ -54,6 +44,88 @@ public class TypeScriptSymbolTreeAnalyzer
             case EnumDeclaration enumDecl:
                 AnalyzeEnum(enumDecl, prefix, hierarchies);
                 break;
+            case ExportAssignment exportAssignment:
+                AnalyzeExportAssignment(exportAssignment, prefix, hierarchies);
+                break;
+        }
+    }
+
+    private void AnalyzeInterface(InterfaceDeclaration interfaceDecl, string prefix, HashSet<string> hierarchies)
+    {
+        var interfaceName = interfaceDecl.IdentifierStr;
+        var interfacePrefix = string.IsNullOrEmpty(prefix) ? ">" + interfaceName : $"{prefix}>{interfaceName}";
+        hierarchies.Add(interfacePrefix);
+
+        foreach (var member in interfaceDecl.Members)
+        {
+            switch (member)
+            {
+                case PropertySignature property:
+                    hierarchies.Add($"{interfacePrefix}@{property.IdentifierStr}");
+                    break;
+                case MethodSignature method:
+                    hierarchies.Add($"{interfacePrefix}/{method.IdentifierStr}");
+                    break;
+            }
+        }
+    }
+
+    private void AnalyzeExportAssignment(ExportAssignment exportAssignment, string prefix, HashSet<string> hierarchies)
+    {
+        string exportPrefix;
+
+        if (exportAssignment.IsExportEquals)
+        {
+            // This is a default export
+            exportPrefix = string.IsNullOrEmpty(prefix) ? ">default" : $"{prefix}>default";
+            hierarchies.Add(exportPrefix);
+        }
+        else
+        {
+            // This is a named export or 'export const'
+            exportPrefix = prefix;
+        }
+
+        switch (exportAssignment.Expression)
+        {
+            case ObjectLiteralExpression objectLiteral:
+                if (string.IsNullOrEmpty(exportPrefix))
+                {
+            
+                    exportPrefix = ">default";
+                    hierarchies.Add(exportPrefix);
+                }
+
+                AnalyzeObjectLiteral(objectLiteral, exportPrefix, hierarchies);
+                break;
+            case Identifier identifier:
+                var identifierName = identifier.GetText();
+                hierarchies.Add($"{exportPrefix}>{identifierName}");
+                break;
+            case CallExpression callExpression:
+                AnalyzeCallExpression(callExpression, exportPrefix, hierarchies);
+                break;
+            case VariableDeclaration variableDeclaration:
+                // This handles 'export const' cases
+                AnalyzeVariableDeclaration(variableDeclaration, exportPrefix, hierarchies);
+                break;
+        }
+    }
+
+    private void AnalyzeVariableDeclaration(VariableDeclaration variableDeclaration, string prefix,
+        HashSet<string> hierarchies)
+    {
+        var varName = variableDeclaration.IdentifierStr;
+        var varPrefix = string.IsNullOrEmpty(prefix) ? "+" + varName : $"{prefix}+{varName}";
+        hierarchies.Add(varPrefix);
+
+        if (variableDeclaration.Initializer is ObjectLiteralExpression objectLiteral)
+        {
+            AnalyzeObjectLiteral(objectLiteral, varPrefix, hierarchies);
+        }
+        else if (variableDeclaration.Initializer != null)
+        {
+            AnalyzeExpression(variableDeclaration.Initializer, varPrefix, hierarchies);
         }
     }
 
@@ -104,6 +176,21 @@ public class TypeScriptSymbolTreeAnalyzer
         }
     }
 
+    private void AnalyzeFunction(FunctionExpression function, string prefix, HashSet<string> hierarchies)
+    {
+        var functionName = function.IdentifierStr;
+        var functionPrefix = $"{prefix}/{functionName}";
+        hierarchies.Add(functionPrefix);
+
+        if (function.Body != null)
+        {
+            foreach (var child in function.Body.Children)
+            {
+                AnalyzeNode(child, functionPrefix, hierarchies);
+            }
+        }
+    }
+
     private void AnalyzeFunction(FunctionDeclaration function, string prefix, HashSet<string> hierarchies)
     {
         var functionName = function.IdentifierStr;
@@ -119,7 +206,8 @@ public class TypeScriptSymbolTreeAnalyzer
         }
     }
 
-    private void AnalyzeVariableStatement(VariableStatement variableStatement, string prefix, HashSet<string> hierarchies)
+    private void AnalyzeVariableStatement(VariableStatement variableStatement, string prefix,
+        HashSet<string> hierarchies)
     {
         foreach (var declaration in variableStatement.DeclarationList.Declarations)
         {
@@ -138,32 +226,158 @@ public class TypeScriptSymbolTreeAnalyzer
         }
     }
 
-    private void AnalyzeArrowFunction(ArrowFunction arrowFunction, string prefix, HashSet<string> hierarchies)
+    private void AnalyzeEnum(EnumDeclaration enumDeclaration, string parentPrefix, HashSet<string> hierarchies)
     {
-        if (arrowFunction.Body is Block block)
+        var enumName = enumDeclaration.IdentifierStr;
+        var enumPrefix = string.IsNullOrEmpty(parentPrefix) ? "@" + enumName : $"{parentPrefix}@{enumName}";
+        hierarchies.Add(enumPrefix);
+
+        foreach (var member in enumDeclaration.Members)
         {
-            foreach (var child in block.Children)
-            {
-                AnalyzeNode(child, prefix, hierarchies);
-            }
+            var memberName = member.Name.GetText();
+            hierarchies.Add($"{enumPrefix}>{memberName}");
         }
     }
+
+    
 
     private void AnalyzeObjectLiteral(ObjectLiteralExpression objectLiteral, string prefix, HashSet<string> hierarchies)
     {
         foreach (var property in objectLiteral.Properties)
         {
-            if (property is PropertyAssignment propAssignment)
+            switch (property)
             {
-                var propName = propAssignment.PropertyName?.GetText() ?? propAssignment.Name.GetText();
-                var propPrefix = $"{prefix}@{propName}";
-                hierarchies.Add(propPrefix);
+                case PropertyAssignment propAssignment:
+                    var propName = propAssignment.PropertyName?.GetText() ?? propAssignment.Name.GetText();
+                    var propPrefix = string.IsNullOrEmpty(prefix) ? propName : $"{prefix}@{propName}";
+                    hierarchies.Add(propPrefix);
 
-                if (propAssignment.Initializer is ArrowFunction arrowFunction)
-                {
-                    AnalyzeArrowFunction(arrowFunction, propPrefix, hierarchies);
-                }
+                    AnalyzePropertyInitializer(propAssignment.Initializer, propPrefix, hierarchies);
+                    break;
+
+                case MethodDeclaration methodDecl:
+                    var methodName = methodDecl.IdentifierStr;
+                    var methodPrefix = string.IsNullOrEmpty(prefix) ? methodName : $"{prefix}/{methodName}";
+                    hierarchies.Add(methodPrefix);
+
+                    AnalyzeMethodBody(methodDecl.Body, methodPrefix, hierarchies);
+                    break;
+
+                case ShorthandPropertyAssignment shorthandProp:
+                    var shorthandName = shorthandProp.Name.GetText();
+                    var shorthandPrefix = string.IsNullOrEmpty(prefix) ? shorthandName : $"{prefix}+{shorthandName}";
+                    hierarchies.Add(shorthandPrefix);
+                    break;
             }
         }
+    }
+
+    private void AnalyzePropertyInitializer(IExpression initializer, string prefix, HashSet<string> hierarchies)
+    {
+        switch (initializer)
+        {
+            case ArrowFunction arrowFunction:
+                AnalyzeArrowFunction(arrowFunction, prefix, hierarchies);
+                break;
+            case FunctionExpression functionExpression:
+                AnalyzeFunction(functionExpression, prefix, hierarchies);
+                break;
+            case ObjectLiteralExpression nestedObjectLiteral:
+                AnalyzeObjectLiteral(nestedObjectLiteral, prefix, hierarchies);
+                break;
+            // Add more cases as needed for other types of initializers
+        }
+    }
+
+    private void AnalyzeMethodBody(IBlockOrExpression body, string prefix, HashSet<string> hierarchies)
+    {
+        switch (body)
+        {
+            case Block blockBody:
+            {
+                foreach (var statement in blockBody.Statements)
+                {
+                    AnalyzeStatement(statement, prefix, hierarchies);
+                }
+
+                break;
+            }
+            case IExpression expression:
+                AnalyzeExpression(expression, prefix, hierarchies);
+                break;
+        }
+    }
+
+    private void AnalyzeArrowFunction(ArrowFunction arrowFunction, string prefix, HashSet<string> hierarchies)
+    {
+        if (arrowFunction.Body is Block block)
+        {
+            foreach (var statement in block.Statements)
+            {
+                AnalyzeStatement(statement, prefix, hierarchies);
+            }
+        }
+        else if (arrowFunction.Body is Expression expression)
+        {
+            AnalyzeExpression(expression, prefix, hierarchies);
+        }
+    }
+
+    private void AnalyzeStatement(IStatement statement, string prefix, HashSet<string> hierarchies)
+    {
+        switch (statement)
+        {
+            case VariableStatement variableStatement:
+                AnalyzeVariableStatement(variableStatement, prefix, hierarchies);
+                break;
+            case ExpressionStatement expressionStatement:
+                AnalyzeExpression(expressionStatement.Expression, prefix, hierarchies);
+                break;
+            case ReturnStatement returnStatement:
+                if (returnStatement.Expression != null)
+                {
+                    AnalyzeExpression(returnStatement.Expression, prefix, hierarchies);
+                }
+
+                break;
+            // Add more cases for other types of statements as needed
+        }
+    }
+
+    private void AnalyzeExpression(IExpression expression, string prefix, HashSet<string> hierarchies)
+    {
+        switch (expression)
+        {
+            case CallExpression callExpression:
+                AnalyzeCallExpression(callExpression, prefix, hierarchies);
+                break;
+            case ObjectLiteralExpression objectLiteral:
+                AnalyzeObjectLiteral(objectLiteral, prefix, hierarchies);
+                break;
+            case ArrowFunction nestedArrowFunction:
+                AnalyzeArrowFunction(nestedArrowFunction, prefix, hierarchies);
+                break;
+            case BinaryExpression binaryExpression:
+                AnalyzeBinaryExpression(binaryExpression, prefix, hierarchies);
+                break;
+            // Add more cases as needed for other expression types
+        }
+    }
+
+    private void AnalyzeCallExpression(CallExpression callExpression, string prefix, HashSet<string> hierarchies)
+    {
+        var functionName = callExpression.Expression.GetText();
+        hierarchies.Add($"{prefix}/{functionName}");
+
+        foreach (var argument in callExpression.Arguments)
+        {
+            AnalyzeExpression(argument, $"{prefix}/{functionName}", hierarchies);
+        }
+    }
+
+    private void AnalyzeBinaryExpression(BinaryExpression binaryExpression, string prefix, HashSet<string> hierarchies)
+    {
+        AnalyzeExpression(binaryExpression.Left, prefix, hierarchies);
+        AnalyzeExpression(binaryExpression.Right, prefix, hierarchies);
     }
 }

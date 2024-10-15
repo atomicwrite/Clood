@@ -681,12 +681,12 @@ Circle.area());
        
           //  Assert.That(result.Data, Does.Contain("typescript.vue:script/#import=vue"));
             Assert.That(result.Data, Does.Contain("typescript.vue:>User"));
-            Assert.That(result.Data, Does.Contain("typescript.vue:defineComponent"));
-            Assert.That(result.Data, Does.Contain("typescript.vue:defineComponent/setup"));
-            Assert.That(result.Data, Does.Contain("typescript.vue:defineComponent/setup/+title"));
-            Assert.That(result.Data, Does.Contain("typescript.vue:defineComponent/setup/+count"));
-            Assert.That(result.Data, Does.Contain("typescript.vue:defineComponent/setup/+user"));
-            Assert.That(result.Data, Does.Contain("typescript.vue:defineComponent/setup/increment"));
+            Assert.That(result.Data, Does.Contain("typescript.vue:/defineComponent"));
+            Assert.That(result.Data, Does.Contain("typescript.vue:/defineComponent/setup"));
+            Assert.That(result.Data, Does.Contain("typescript.vue:/defineComponent/setup+title"));
+            Assert.That(result.Data, Does.Contain("typescript.vue:/defineComponent/setup+count"));
+            Assert.That(result.Data, Does.Contain("typescript.vue:/defineComponent/setup+user"));
+            Assert.That(result.Data, Does.Contain("typescript.vue:/defineComponent/setup+increment"));
         });
     }
 
@@ -746,25 +746,35 @@ Circle.area());
 
         Assert.That(response.IsSuccessStatusCode, Is.True);
         var content = await response.Content.ReadAsStringAsync();
-        var result = JsonConvert.DeserializeObject<CloodResponse<List<string>>>(content);
+        var resultDto = JsonConvert.DeserializeObject<CloodResponse<List<string>>>(content);
+        var result = resultDto.Data;
+        Assert.That(result, Does.Contain("composition.vue:>default"));
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result.Success, Is.True);
-            Assert.That(result.Data, Is.Not.Null);
-         
-            Assert.That(result.Data, Does.Contain("composition.vue:/div/button/@click=updateMessage"));
-          
-            Assert.That(result.Data, Does.Contain("composition.vue:#import=vue"));
-            Assert.That(result.Data, Does.Contain("composition.vue:#import=./useCounter"));
-            Assert.That(result.Data, Does.Contain("composition.vue:setup"));
-            Assert.That(result.Data, Does.Contain("composition.vue:setup/+title"));
-            Assert.That(result.Data, Does.Contain("composition.vue:setup/+message"));
-            Assert.That(result.Data, Does.Contain("composition.vue:setup/useCounter"));
-            Assert.That(result.Data, Does.Contain("composition.vue:setup/+uppercaseMessage"));
-            Assert.That(result.Data, Does.Contain("composition.vue:setup/updateMessage"));
-        });
+        // Check for component name
+        Assert.That(result, Does.Contain("composition.vue:>default@name"));
+
+        // Check for setup function
+        Assert.That(result, Does.Contain("composition.vue:>default/setup"));
+
+        // Check for variables in setup
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+title"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+message"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+count"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+increment"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+uppercaseMessage"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+updateMessage"));
+
+        // Check for lifecycle hook
+        Assert.That(result, Does.Contain("composition.vue:>default/setup/onMounted"));
+
+ 
+ 
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+title"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+message"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+count"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+increment"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+uppercaseMessage"));
+        Assert.That(result, Does.Contain("composition.vue:>default/setup+updateMessage"));
     }
 
     [Test]

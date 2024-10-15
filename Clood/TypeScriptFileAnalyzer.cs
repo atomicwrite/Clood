@@ -16,7 +16,7 @@ public class TypeScriptFileAnalyzer
             // Read the file content
             string fileContent = File.ReadAllText(fileName);
 
-            // Analyze the content
+            var str = _analyzer.ToString();
             return _analyzer.AnalyzeSymbolTree(fileContent, fileName);
         }
         catch (FileNotFoundException)
