@@ -1,23 +1,33 @@
+using Clood.Endpoints;
 using CommandLine;
+using Microsoft.Extensions.Configuration;
 using Serilog;
-
+ 
 namespace Clood;
 
-internal class Program
+public class Program
 {
     private static async Task Main(string[] args)
     {
         // Configure and initialize Serilog
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .WriteTo.File("logs/clood-.log", rollingInterval: RollingInterval.Day)
-            .CreateLogger();
-
+        LogConfig.ConfigureLogging();
+        var tempConfig = new ConfigurationBuilder()
+            .AddCommandLine(args)
+            .AddEnvironmentVariables()
+            
+            .Build();
+        var isTestEnvironment = tempConfig["test"] == "true";
+        var gitRoot = tempConfig["git-root"];
+        var serverUrls = tempConfig["server-urls"];
+        if (isTestEnvironment)
+        {
+            CloodServer.Start(serverUrls?? throw new InvalidOperationException("Server urls was null"),gitRoot ?? throw new InvalidOperationException("Git root was null"));
+            return;
+        }
         try
         {
             Log.Information("Starting Clood application");
-
+            
             await Parser.Default.ParseArguments<CliOptions>(args)
                 .WithParsedAsync(async (opts) => await Clood.RunWithOptions(opts));
 

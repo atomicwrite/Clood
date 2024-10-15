@@ -1,1 +1,1 @@
-{"files":[],"prompt":"Create a test for it in CloodTest.\n\nuse this as an example.\n\nnamespace CloodTest;\n\npublic class Tests\n{\n    [SetUp]\n    public void Setup()\n    {\n    }\n\n    [Test]\n    public void Test1()\n    {\n        Assert.Pass();\n    }\n}"}
+{"files":["Clood/Endpoints/API/CloodApi.cs","Clood/Program.cs"],"prompt":"We\u0027re using serilogger, update CloodApi.cs to use serilogger appropriatealy.\n\n~"}

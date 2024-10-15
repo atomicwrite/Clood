@@ -1,4 +1,4 @@
-Analyze the existing project structure and create a comprehensive README.md file for the CloodAndFriends solution, focusing on the following aspects:
+Analyze the existing project structure and create a comprehensive README2.md file for the CloodAndFriends solution, focusing on the following aspects:
 
 1. Project overview: Briefly describe the purpose and main features of the CloodAndFriends solution.
 2. Project structure: List the main projects (Clood, CloodKey, CloodTest) and their primary responsibilities.
@@ -11,3 +11,5 @@ Analyze the existing project structure and create a comprehensive README.md file
 9. License information: Specify the project's license.
 
 Ensure the README is well-structured, easy to read, and provides enough information for both new developers and potential users to understand and work with the project.
+
+Put it in Clood/Readme2.md

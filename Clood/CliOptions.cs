@@ -1,6 +1,7 @@
-﻿using CommandLine;
-using System.IO;
-using System.Linq;
+﻿// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
+using CommandLine; 
+// ReSharper disable UnusedAutoPropertyAccessor.Global
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 namespace Clood;
 
@@ -27,8 +28,8 @@ public class CliOptions
     [Option('s', "system-prompt", Required = false, HelpText = "c:\\sysprompt.md")]
     public string SystemPrompt { get; set; }
 
-    [Value(0, Min = 1, HelpText = "List of files to process.")]
-    public IEnumerable<string> Files { get; set; }
+    // [Value(0, Min = 1, HelpText = "List of files to process.")]
+    // public IEnumerable<string> Files { get; set; }
 
     public bool Validate()
     {
@@ -56,16 +57,16 @@ public class CliOptions
         }
 
         // Check if all specified files exist
-        var nonExistentFiles = Files.Where(file => !File.Exists(file)).ToList();
-        if (nonExistentFiles.Count == 0) return isValid;
-        {
-            Console.WriteLine("Error: The following specified files do not exist:");
-            foreach (var file in nonExistentFiles)
-            {
-                Console.WriteLine($"  - {file}");
-            }
-            isValid = false;
-        }
+        // var nonExistentFiles = Files.Where(file => !File.Exists(file)).ToList();
+        // if (nonExistentFiles.Count == 0) return isValid;
+        // {
+        //     Console.WriteLine("Error: The following specified files do not exist:");
+        //     foreach (var file in nonExistentFiles)
+        //     {
+        //         Console.WriteLine($"  - {file}");
+        //     }
+        //     isValid = false;
+        // }
 
         return isValid;
     }
