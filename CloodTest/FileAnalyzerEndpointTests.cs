@@ -110,8 +110,7 @@ public class FileAnalyzerEndpointTests
             Assert.That(result.Data, Is.Empty);
         });
 
-        // Cleanup
-        File.Delete(outsideFilePath);
+   
     }
 
     [Test]
