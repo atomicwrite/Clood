@@ -5,6 +5,11 @@ using Serilog;
  
 namespace Clood;
 
+/// <summary>
+/// The main entry point for the Clood application.
+/// This class handles the initialization of logging, configuration parsing,
+/// and execution of the application in both test and production environments.
+/// </summary>
 public class Program
 {
     private static async Task Main(string[] args)
