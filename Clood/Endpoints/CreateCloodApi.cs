@@ -27,7 +27,7 @@ public static class CreateCloodApi
             await SwapToNewBranch(request.Files, session);
         }
 
-        session.ProposedChanges = await GetClaudeFileChanges(request.Prompt, files);
+        (session.ProposedChanges, var claudeResponse) = await GetClaudeFileChanges(request.Prompt, files);
 
 
         Log.Information("Received proposed changes from Claude AI");
@@ -42,8 +42,10 @@ public static class CreateCloodApi
 
         Log.Information("Successfully created Clood session {SessionId}", session.Id);
         response.Success = true;
+        
         response.Data = new CloodStartResponse
         {
+            ClaudeResponse = claudeResponse,
             Id = session.Id,
             NewBranch = session.NewBranch,
             ProposedChanges = session.ProposedChanges,
@@ -104,7 +106,7 @@ public static class CreateCloodApi
         return files.Select(a => Path.Join(CloodApi.GitRoot, a)).ToList();
     }
 
-    private static async Task<FileChanges> GetClaudeFileChanges(string prompt, List<string> files)
+    private static async Task<(FileChanges fileChanges, string claudeResponse)> GetClaudeFileChanges(string prompt, List<string> files)
     {
         Log.Information("Sending request to Claude AI");
 
@@ -123,7 +125,7 @@ public static class CreateCloodApi
         {
             fileChanges.ChangedFiles ??= [];
             fileChanges.NewFiles ??= [];
-            return fileChanges;
+            return (fileChanges,claudeResponse);
         }
 
         Log.Warning("Claude AI could not answer the question");
