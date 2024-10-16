@@ -32,11 +32,19 @@ public static class ClaudiaHelper
         {
             ApiKey = apiKey
         };
-        MaxTokens = 8192;
+        var maxTokens = config["MAXTOKENS"];
+        if (maxTokens != null && int.TryParse(maxTokens, out var mxToken))
+        {
+            MaxTokens = mxToken;
+        }
+        else
+        {
+            MaxTokens = 8192;
+        }
     }
 
     private static readonly Anthropic Anthropic;
-    private static readonly int MaxTokens;
+    public static int MaxTokens { get; set; }
     private static readonly ILogger Log = Serilog.Log.ForContext<Program>();
 
     public static PromptImprovement? ClaudiaPrompt2Json(string response)

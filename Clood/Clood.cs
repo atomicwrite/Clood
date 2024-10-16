@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Clood.Endpoints;
+using Clood.Helpers;
 
 namespace Clood;
 
@@ -13,11 +14,10 @@ public static class Clood
             return Task.CompletedTask;
         }
 
-
-        if (!opts.Server) 
+        ClaudiaHelper.MaxTokens = opts.MaxTokens;
+        if (!opts.Server)
             return Task.CompletedTask;
         CloodServer.Start(opts.Urls, opts.GitRoot);
         return Task.CompletedTask;
-
     }
 }

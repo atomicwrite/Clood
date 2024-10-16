@@ -1,5 +1,7 @@
 ﻿// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
-using CommandLine; 
+
+using CommandLine;
+
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
@@ -7,21 +9,24 @@ namespace Clood;
 
 public class CliOptions
 {
+    [Option('t', "max-tokens", Required = false, HelpText = "Max Tokens per message", Default = 8192)]
+    public int MaxTokens { get; set; }
+
     [Option('m', "server", Required = false, HelpText = "start a server")]
     public bool Server { get; set; }
-    
+
     [Option('u', "server-urls", Required = false, HelpText = "Minimal api run urls")]
     public string Urls { get; set; }
-    
+
     [Option('v', "version", Required = false, HelpText = "Print the version and quit")]
     public bool Version { get; set; }
-    
+
     [Option('g', "git-path", Required = false, HelpText = "Optional path to git")]
     public string? GitPath { get; set; }
-    
+
     [Option('r', "git-root", Required = true, HelpText = "The Git root ")]
     public string GitRoot { get; set; }
-    
+
     [Option('p', "prompt", Required = false, HelpText = "Prompt for Claude AI.")]
     public string Prompt { get; set; }
 
@@ -36,21 +41,23 @@ public class CliOptions
         var isValid = true;
         if (Server)
         {
-            
             return true;
         }
+
         // Check if GitPath exists (if specified)
         if (!string.IsNullOrEmpty(GitPath) && !File.Exists(GitPath))
         {
             Console.WriteLine($"Error: Specified Git path does not exist: {GitPath}");
             isValid = false;
         }
+
         if (!string.IsNullOrEmpty(SystemPrompt) && !File.Exists(SystemPrompt))
         {
             Console.WriteLine($"Error: Specified SystemPrompt path does not exist: {SystemPrompt}");
             isValid = false;
         }
-        if (!string.IsNullOrEmpty(Prompt) )
+
+        if (!string.IsNullOrEmpty(Prompt))
         {
             Console.WriteLine($"Error: Prompt was not provided: ");
             isValid = false;
